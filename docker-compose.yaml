@@ -8,7 +8,7 @@ services:
     restart: no
     tty: true
     volumes:
-      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./settings/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
     network_mode: host
   bishop:
@@ -20,7 +20,7 @@ services:
     restart: no
     tty: true
     volumes:
-      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./settings/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
     network_mode: host
   s3relay:
@@ -32,7 +32,7 @@ services:
     restart: no
     tty: true
     volumes:
-      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./settings/gateway/relay_config.ini:/src/jxser/gateway/s3relay/relay_config.ini"
       - "./settings/gateway/hostset.ini:/src/jxser/gateway/s3relay/settings/hostset.ini"
     network_mode: host
@@ -45,6 +45,6 @@ services:
     restart: no
     tty: true
     volumes:
-      - /home/jxser_vozer/server/server1:/src/jxser/server1/
-      - "./settings/gs1/servercfg.ini:/src/jxser/server1/servercf0.ini"
+      - "${SERVER_PATH}/server1:/src/jxser/server1/"
+      - "./settings/gs1/servercf0.ini:/src/jxser/server1/servercf0.ini"
     network_mode: host
