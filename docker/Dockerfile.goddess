@@ -1,0 +1,18 @@
+FROM centos:7
+
+ENV TZ=Asia/Ho_Chi_Minh
+
+# CentOS 7 is EOL; default mirrorlist entries may no longer work.
+# Point repo files to vault.centos.org so `yum -y update` can find packages.
+RUN for f in /etc/yum.repos.d/*.repo; do \
+		sed -i 's/^mirrorlist=/#mirrorlist=/g' "$f"; \
+		sed -i 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' "$f"; \
+	done \
+	&& yum -y makecache || true \
+	&& yum -y update \
+	&& yum -y install libuuid.i686 libcrypto.so.6 libcurl.so.4 \
+	&& yum clean all
+
+WORKDIR /src/jxser/gateway/
+
+CMD [ "./goddess_y" ]

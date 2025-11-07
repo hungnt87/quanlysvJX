@@ -1,0 +1,50 @@
+services:
+  goddess:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.goddess
+    image: goddess
+    container_name: goddess
+    restart: no
+    tty: true
+    volumes:
+      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "./settings/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
+    network_mode: host
+  bishop:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.bighop
+    image: bighop
+    container_name: bishop
+    restart: no
+    tty: true
+    volumes:
+      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "./settings/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
+    network_mode: host
+  s3relay:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.s3relay
+    image: s3relay
+    container_name: s3relay
+    restart: no
+    tty: true
+    volumes:
+      - /home/jxser_vozer/server/gateway/:/src/jxser/gateway/
+      - "./settings/gateway/relay_config.ini:/src/jxser/gateway/s3relay/relay_config.ini"
+      - "./settings/gateway/hostset.ini:/src/jxser/gateway/s3relay/settings/hostset.ini"
+    network_mode: host
+  jx_linux:
+    build:
+      context: ./docker
+      dockerfile: Dockerfile.jx_linux
+    image: jx_linux
+    container_name: jx_linux
+    restart: no
+    tty: true
+    volumes:
+      - /home/jxser_vozer/server/server1:/src/jxser/server1/
+      - "./settings/gs1/servercfg.ini:/src/jxser/server1/servercf0.ini"
+    network_mode: host
