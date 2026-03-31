@@ -92,13 +92,13 @@ nIdSkill = 253 -- Ngu doc thuc cot
 nIdSkill = 892
 nIdSkill = 16 --la han tran 
 nIdSkill = 983 --la han tran imba
-nIdSkill = 253
+nIdSkill = 75
 function addskill()
 	--DoClearSkillCore()
 	-- local nIdSkill = 586 -- tang chi mang
 	-- local nIdSkill = 75 -- Ngu doc ky kinh
 	-- local nIdSkill = 1129 -- Bang sat ngoai cong
-	local nLevelSkill = 50
+	local nLevelSkill = 30
 	AddMagic(nIdSkill, nLevelSkill);
 	-- for nId, setting in pairs(tbListSkill) do
 	-- 	if (HaveMagic(nId) ~= -1) then
@@ -183,8 +183,8 @@ function addkhang()
 	--AddSkillState(470, 10, 1, nTime,1) -- Khang chi mang
 	RemoveSkillState(892)
 	--AddSkillState(892,  10, 1, nTime,1) -- Tang kinh nghiem
-	--RemoveSkillState(966)
-	--AddSkillState(966, 2, 1, nTime,1) -- nhat ky
+	RemoveSkillState(966)
+	AddSkillState(966, 6, 1, nTime,1) -- nhat ky
 	--RemoveSkillState(496)
 	--AddSkillState(496, 12, 1, nTime,1) -- toc do danh
 	--RemoveSkillState(519)
@@ -347,12 +347,12 @@ function GiveLak()
 	--AddStackItem(50,6,1,190,1,0,0); --Phi toc TK
 	-- end
 	--AddStackItem(10,6,1,4925,1,0,0); --cuong bao don
-	AddStackItem(10,6,1,4935,1,0,0); --pho cong don
-	AddStackItem(10,6,1,4931,1,0,0); --phuc hoi
-	AddStackItem(10,6,1,4932,1,0,0); --khang choang
-	AddStackItem(10,6,1,4933,1,0,0); --trung doc
-	AddStackItem(10,6,1,4934,1,0,0); --khang cham
-	AddStackItem(10,6,1,4940,1,0,0); --mau
+	-- AddStackItem(10,6,1,4935,1,0,0); --pho cong don
+	-- AddStackItem(10,6,1,4931,1,0,0); --phuc hoi
+	-- AddStackItem(10,6,1,4932,1,0,0); --khang choang
+	-- AddStackItem(10,6,1,4933,1,0,0); --trung doc
+	-- AddStackItem(10,6,1,4934,1,0,0); --khang cham
+	-- AddStackItem(10,6,1,4940,1,0,0); --mau
 
 	-- AddStackItem(50,6,1,4931,1,0,0);
 	-- AddStackItem(50,6,1,4932,1,0,0);
@@ -363,7 +363,7 @@ function GiveLak()
 	--AddStackItem(1,6,1,4923,1,0,0); --ruong kim quang
 	-- local nIdx = AddItem(0, 14, 0, 10, 0, 0, 0)
 	for i =1, 3 do
-	--AddGoldItem(0,  60)
+		AddGoldItem(0,  75)
 	end
 	--AddStackItem(1,6,1,61,1,0,0) --lenh bai boss
 	--local nIdx = AddGoldItem(0, 119)
