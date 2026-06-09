@@ -1,4 +1,99 @@
 services:
+  jxmysql:
+    image: mysql:5.6
+    container_name: jxmysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234560123"
+    command: --explicit_defaults_for_timestamp=1 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    mem_limit: 1g
+    volumes:
+      - ./database/mysql_server1/data:/var/lib/mysql
+      - ./settings/docker.cnf:/etc/mysql/conf.d/docker.cnf:ro
+    networks:
+      - jxnet
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$${MYSQL_ROOT_PASSWORD} --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  jxmssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    restart: unless-stopped
+    container_name: jxmssql
+    ports:
+      - "1433:1433"
+    environment:
+      SA_PASSWORD: "SAJx123456"
+      ACCEPT_EULA: "Y"
+      TZ: "Asia/Ho_Chi_Minh"
+    volumes:
+      - ./database/mssql/data:/var/opt/mssql/data
+      - ./database/mssql/certs:/var/opt/mssql/certs:ro
+      - ./database/mssql/mssql.conf:/var/opt/mssql/mssql.conf:ro
+      - /etc/localtime:/etc/localtime:ro
+    mem_limit: 1g
+    networks:
+      - jxnet
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/1433'"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  paysys:
+    build:
+      context: .
+      dockerfile: dockerfiles/Dockerfile.paysys
+    image: paysys
+    container_name: paysys
+    restart: no
+    tty: true
+    ipc: host
+    environment:
+      - DISPLAY=:99
+    volumes:
+      - "./paysyswin:/src/paysys"
+    network_mode: host
+    depends_on:
+      jxmysql:
+        condition: service_healthy
+      jxmssql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/5002'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  s3relayserver:
+    image: paysys
+    container_name: s3relayserver
+    restart: no
+    tty: true
+    ipc: host
+    environment:
+      - DISPLAY=:98
+    volumes:
+      - "./paysyswin:/src/paysys"
+    network_mode: host
+    depends_on:
+      paysys:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/7777'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    command: [ "s3relay-entrypoint.sh" ]
+
   goddess:
     build:
       context: ./dockerfiles
@@ -23,6 +118,7 @@ services:
       timeout: 3s
       retries: 30
       start_period: 5s
+
   bishop:
     build:
       context: ./dockerfiles
@@ -47,6 +143,7 @@ services:
       timeout: 3s
       retries: 30
       start_period: 5s
+
   s3relay:
     build:
       context: ./dockerfiles
@@ -79,15 +176,16 @@ services:
       timeout: 12s
       retries: 12
       start_period: 5s
-  jx_linux:
+
+  jxserver:
     build:
       context: ./dockerfiles
       dockerfile: Dockerfile.jx-centos
       args:
         APP_WORKDIR: /src/jxser/server1/
         APP_CMD: jx_linux_y
-    image: jx_linux
-    container_name: jx_linux
+    image: jxserver
+    container_name: jxserver
     restart: no
     tty: true
     volumes:
@@ -103,45 +201,6 @@ services:
       s3relay:
         condition: service_healthy
 
-  paysys:
-    build:
-      context: .
-      dockerfile: dockerfiles/Dockerfile.paysys
-    image: paysys
-    container_name: paysys
-    restart: no
-    tty: true
-    ipc: host
-    environment:
-      - DISPLAY=:99
-    volumes:
-      - "./paysyswin:/src/paysys"
-    network_mode: host
-    healthcheck:
-      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/5002'"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-      start_period: 5s
-
-  s3relayserver:
-    image: paysys
-    container_name: s3relayserver
-    restart: no
-    tty: true
-    ipc: host
-    environment:
-      - DISPLAY=:98
-    volumes:
-      - "./paysyswin:/src/paysys"
-    network_mode: host
-    depends_on:
-      paysys:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/7777'"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
-      start_period: 5s
-    command: [ "s3relay-entrypoint.sh" ]
+networks:
+  jxnet:
+    driver: bridge
