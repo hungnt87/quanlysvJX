@@ -122,15 +122,10 @@ Windows Registry Editor Version 5.00
 
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
 "*msado15"="native,builtin"
-"*msdatl3"="native,builtin"
 "*mtxdm"="native,builtin"
 "*odbc32"="native,builtin"
 "*odbccp32"="native,builtin"
 "*oledb32"="native,builtin"
-"*sqloledb"="native,builtin"
-"*msdaps"="native,builtin"
-"*msdaenum"="native,builtin"
-"*msdasql"="native,builtin"
 
 [HKEY_CLASSES_ROOT\ADODB.Connection]
 @="Connection"
@@ -165,6 +160,7 @@ Windows Registry Editor Version 5.00
 "OLEDB_SERVICES"=dword:ffffffff
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors]
+@="Extended Error Service"
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}]
 @="SQLOLEDB Error Lookup"
@@ -176,12 +172,48 @@ Windows Registry Editor Version 5.00
 "ThreadingModel"="Both"
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\OLE DB Provider]
+@="Microsoft OLE DB Provider for SQL Server"
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ProgID]
 @="SQLOLEDB.1"
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\VersionIndependentProgID]
 @="SQLOLEDB"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}]
+@="MSDAINITIALIZE Class"
+"AppID"="{2206CDB0-19C1-11D1-89E0-00C04FD7A829}"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}\ExtendedErrors]
+@="Extended Error Service"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}\ExtendedErrors\{2206CDB3-19C1-11D1-89E0-00C04FD7A829}]
+@="MSDASC Error Lookup"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}\InprocServer32]
+@="C:\\Program Files\\Common Files\\System\\OLE DB\\oledb32.dll"
+"ThreadingModel"="Both"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}\ProgID]
+@="MSDASC.MSDAINITIALIZE.1"
+
+[HKEY_CLASSES_ROOT\CLSID\{2206CDB0-19C1-11D1-89E0-00C04FD7A829}\VersionIndependentProgID]
+@="MSDASC.MSDAINITIALIZE"
+
+[HKEY_CLASSES_ROOT\MSDASC.MSDAINITIALIZE]
+@="MSDAINITIALIZE Class"
+
+[HKEY_CLASSES_ROOT\MSDASC.MSDAINITIALIZE\CLSID]
+@="{2206CDB0-19C1-11D1-89E0-00C04FD7A829}"
+
+[HKEY_CLASSES_ROOT\MSDASC.MSDAINITIALIZE\CurVer]
+@="MSDASC.MSDAINITIALIZE.1"
+
+[HKEY_CLASSES_ROOT\MSDASC.MSDAINITIALIZE.1]
+@="MSDAINITIALIZE Class"
+
+[HKEY_CLASSES_ROOT\MSDASC.MSDAINITIALIZE.1\CLSID]
+@="{2206CDB0-19C1-11D1-89E0-00C04FD7A829}"
 
 [HKEY_CLASSES_ROOT\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}]
 @="FoxOLEDB 1.0 Object"
@@ -294,15 +326,6 @@ echo "[INFO] Importing registry entries via wine regedit..."
 wine regedit /S "${REG_FILE}"
 wineserver -w || true
 rm -f "${REG_FILE}"
-
-echo "[INFO] Registering OLE DB and ADO DLLs via regsvr32..."
-# Đăng ký tự động các DLL qua regsvr32
-wine regsvr32 /s oledb32.dll || echo "[WARN] Failed to register oledb32.dll via regsvr32"
-wine regsvr32 /s msdaps.dll || echo "[WARN] Failed to register msdaps.dll via regsvr32"
-wine regsvr32 /s msdaenum.dll || echo "[WARN] Failed to register msdaenum.dll via regsvr32"
-wine regsvr32 /s sqloledb.dll || echo "[WARN] Failed to register sqloledb.dll via regsvr32"
-wine regsvr32 /s msado15.dll || echo "[WARN] Failed to register msado15.dll via regsvr32"
-wineserver -w || true
 
 printf '%s\n' "$(date -Is)" >"${READY_MARKER}"
 echo "[INFO] MDAC/SQLOLEDB Wine prefix is ready: ${READY_MARKER}"
