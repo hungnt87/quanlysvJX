@@ -105,6 +105,8 @@ Windows Registry Editor Version 5.00
 "msdaps"="native"
 "msdaenum"="native"
 "msdasql"="native,builtin"
+"odbc32"="native"
+"odbccp32"="native"
 
 [HKEY_CLASSES_ROOT\ADODB.Connection]
 @="Connection"

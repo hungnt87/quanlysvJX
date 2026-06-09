@@ -35,16 +35,15 @@ RUN groupadd -g 1000 appgroup \
 WORKDIR /home/appuser
 
 COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
-COPY --chown=appuser:appgroup paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
+COPY paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
 
-RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
-    && chown -R appuser:appgroup /home/appuser
+RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh
 
-# Chạy setup MDAC dưới quyền appuser
-USER appuser
+# Chạy setup MDAC dưới quyền root để đảm bảo toàn quyền ghi registry hệ thống của Wine
 RUN xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE \
     && rm -f /tmp/MDAC_TYP.EXE \
-    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak
+    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak \
+    && chown -R appuser:appgroup /home/appuser
 
 # ==========================================
 # STAGE 2: Runtime (Image tối giản cuối cùng)

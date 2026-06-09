@@ -7,7 +7,8 @@ READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 mkdir -p /src/paysys/payserver_log
 
 # Xóa lock file của Xvfb cũ nếu có
-rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 || true
+DISPLAY_NUM=$(echo "${DISPLAY}" | sed 's/://g')
+rm -f "/tmp/.X${DISPLAY_NUM}-lock" "/tmp/.X11-unix/X${DISPLAY_NUM}" || true
 if ! pgrep -f "Xvfb ${DISPLAY}" >/dev/null 2>&1; then
     Xvfb "${DISPLAY}" -screen 0 1280x1024x24 -nolisten tcp &
     sleep 1
