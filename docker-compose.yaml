@@ -2,7 +2,10 @@ services:
   goddess:
     build:
       context: ./dockerfiles
-      dockerfile: Dockerfile.goddess
+      dockerfile: Dockerfile.jx-centos
+      args:
+        APP_WORKDIR: /src/jxser/gateway/
+        APP_CMD: goddess_y
     image: goddess
     container_name: goddess
     restart: no
@@ -11,10 +14,22 @@ services:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./settings/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
     network_mode: host
+    depends_on:
+      s3relayserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/5001'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
   bishop:
     build:
       context: ./dockerfiles
-      dockerfile: Dockerfile.bishop
+      dockerfile: Dockerfile.jx-centos
+      args:
+        APP_WORKDIR: /src/jxser/gateway/
+        APP_CMD: bishop_y
     image: bishop
     container_name: bishop
     restart: no
@@ -23,10 +38,22 @@ services:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./settings/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
     network_mode: host
+    depends_on:
+      goddess:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/5622' && bash -ec '</dev/tcp/127.0.0.1/5632'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
   s3relay:
     build:
       context: ./dockerfiles
-      dockerfile: Dockerfile.s3relay
+      dockerfile: Dockerfile.jx-centos
+      args:
+        APP_WORKDIR: /src/jxser/gateway/s3relay/
+        APP_CMD: s3relay_y
     image: s3relay
     container_name: s3relay
     restart: no
@@ -43,10 +70,22 @@ services:
       - ./logs/gateway/s3relay/relay_logs:/src/jxser/gateway/s3relay/relay_logs
       - ./logs/gateway/s3relay/RelayRunData:/src/jxser/gateway/s3relay/RelayRunData
     network_mode: host
+    depends_on:
+      bishop:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "sleep 10; kill -0 1"]
+      interval: 10s
+      timeout: 12s
+      retries: 12
+      start_period: 5s
   jx_linux:
     build:
       context: ./dockerfiles
-      dockerfile: Dockerfile.jx_linux
+      dockerfile: Dockerfile.jx-centos
+      args:
+        APP_WORKDIR: /src/jxser/server1/
+        APP_CMD: jx_linux_y
     image: jx_linux
     container_name: jx_linux
     restart: no
@@ -60,6 +99,9 @@ services:
       - "./script/configserver.lua:/src/jxser/server1/script/global/mel/configserver.lua"
       - "./settings/npcs.txt:/src/jxser/server1/settings/npcs.txt"
     network_mode: host
+    depends_on:
+      s3relay:
+        condition: service_healthy
 
   paysys:
     build:
@@ -75,6 +117,12 @@ services:
     volumes:
       - "./paysyswin:/src/paysys"
     network_mode: host
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/5002'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
 
   s3relayserver:
     image: paysys
@@ -87,5 +135,13 @@ services:
     volumes:
       - "./paysyswin:/src/paysys"
     network_mode: host
-    command: ["s3relay-entrypoint.sh"]
-
+    depends_on:
+      paysys:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -ec '</dev/tcp/127.0.0.1/7777'"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    command: [ "s3relay-entrypoint.sh" ]

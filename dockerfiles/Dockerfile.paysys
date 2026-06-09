@@ -42,7 +42,10 @@ RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
     && chown appuser:appgroup /tmp/MDAC_TYP.EXE
 
 # Chạy setup MDAC dưới appuser để prefix runtime có đúng owner và HOME.
-RUN su appuser -c 'xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE' \
+# S3RelayServer ổn định với prefix MDAC base, còn Sword3PaySys cần thêm
+# SQLOLEDB registry overlay để mở cổng 5002.
+RUN su appuser -c 'WINEPREFIX=/home/appuser/.win32-s3relay PAYSYS_MDAC_OVERLAY=0 xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE' \
+    && su appuser -c 'WINEPREFIX=/home/appuser/.win32 PAYSYS_MDAC_OVERLAY=1 xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE' \
     && rm -f /tmp/MDAC_TYP.EXE \
     && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak \
     && chown -R appuser:appgroup /home/appuser
@@ -86,8 +89,9 @@ RUN groupadd -g 1000 appgroup \
 
 WORKDIR /src/paysys/
 
-# Copy Wine prefix đã được chuẩn bị từ builder stage.
+# Copy Wine prefixes đã được chuẩn bị từ builder stage.
 COPY --from=builder --chown=appuser:appgroup /home/appuser/.win32 /home/appuser/.win32
+COPY --from=builder --chown=appuser:appgroup /home/appuser/.win32-s3relay /home/appuser/.win32-s3relay
 
 COPY dockerfiles/paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh
 COPY dockerfiles/s3relay-entrypoint.sh /usr/local/bin/s3relay-entrypoint.sh

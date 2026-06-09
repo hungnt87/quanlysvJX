@@ -4,6 +4,7 @@ set -eu
 MDAC_EXE="${1:-/src/paysys/MDAC_TYP.EXE}"
 WINE_PREFIX="${WINEPREFIX:-/home/appuser/.win32}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
+APPLY_OVERLAY="${PAYSYS_MDAC_OVERLAY:-1}"
 EXTRACT_DIR="/tmp/mdac-extract"
 SQL_OLEDB_DIR="/tmp/sqloldb"
 SQL_NET_DIR="/tmp/sqlnet"
@@ -31,12 +32,15 @@ if command -v winetricks >/dev/null 2>&1; then
 
     if [ -f "${WINE_PREFIX}/drive_c/Program Files/Common Files/System/ADO/msado27.tlb" ] \
         || [ -f "${WINE_PREFIX}/drive_c/Program Files/Common Files/System/ADO/msado15.dll" ]; then
-        printf '%s\n' "$(date -Is)" >"${READY_MARKER}"
-        echo "[INFO] MDAC/SQLOLEDB Wine prefix is ready: ${READY_MARKER}"
-        exit 0
+        if [ "${APPLY_OVERLAY}" = "0" ]; then
+            printf '%s\n' "$(date -Is)" >"${READY_MARKER}"
+            echo "[INFO] Base MDAC Wine prefix is ready: ${READY_MARKER}"
+            exit 0
+        fi
+        echo "[INFO] winetricks installed MDAC files; applying SQLOLEDB registry overlay."
+    else
+        echo "[WARN] winetricks did not install MDAC files; falling back to manual extraction."
     fi
-
-    echo "[WARN] winetricks did not install MDAC files; falling back to manual extraction."
 fi
 
 wineboot --init
@@ -117,15 +121,16 @@ cat >"${REG_FILE}" <<'EOF_REG'
 Windows Registry Editor Version 5.00
 
 [HKEY_CURRENT_USER\Software\Wine\DllOverrides]
-"msado15"="native,builtin"
-"msdatl3"="native,builtin"
-"sqloledb"="native"
-"oledb32"="native"
-"msdaps"="native"
-"msdaenum"="native"
-"msdasql"="native,builtin"
-"odbc32"="native"
-"odbccp32"="native"
+"*msado15"="native,builtin"
+"*msdatl3"="native,builtin"
+"*mtxdm"="native,builtin"
+"*odbc32"="native,builtin"
+"*odbccp32"="native,builtin"
+"*oledb32"="native,builtin"
+"*sqloledb"="native,builtin"
+"*msdaps"="native,builtin"
+"*msdaenum"="native,builtin"
+"*msdasql"="native,builtin"
 
 [HKEY_CLASSES_ROOT\ADODB.Connection]
 @="Connection"
@@ -167,7 +172,7 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\Implemented Categories\{D267E19A-0B97-11D2-BB1C-00C04FC9B532}]
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\InprocServer32]
-@="C:\\windows\\system32\\sqloledb.dll"
+@="C:\\Program Files\\Common Files\\System\\OLE DB\\sqloledb.dll"
 "ThreadingModel"="Both"
 
 [HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\OLE DB Provider]
@@ -208,7 +213,7 @@ Windows Registry Editor Version 5.00
 @="SQLOLEDB Error Lookup"
 
 [HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\InprocServer32]
-@="C:\\windows\\system32\\sqloledb.dll"
+@="C:\\Program Files\\Common Files\\System\\OLE DB\\sqloledb.dll"
 "ThreadingModel"="Both"
 
 [HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\ProgID]
@@ -221,7 +226,7 @@ Windows Registry Editor Version 5.00
 @="SQLOLEDB Enumerator"
 
 [HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\InprocServer32]
-@="C:\\windows\\system32\\sqloledb.dll"
+@="C:\\Program Files\\Common Files\\System\\OLE DB\\sqloledb.dll"
 "ThreadingModel"="Both"
 
 [HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\OLE DB Enumerator]
@@ -283,27 +288,6 @@ Windows Registry Editor Version 5.00
 [HKEY_CLASSES_ROOT\TypeLib\{2A75196C-D9EB-4129-B803-931327F72D5C}\2.8\0\win32]
 @="C:\\Program Files\\Common Files\\System\\ADO\\msado15.dll"
 
-[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}]
-@="OLE DB Root Binder"
-
-[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}\InprocServer32]
-@="C:\\windows\\system32\\oledb32.dll"
-"ThreadingModel"="Both"
-
-[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}\ProgID]
-@="MSDAINITIALIZE.1"
-
-[HKEY_CLASSES_ROOT\MSDAINITIALIZE]
-@="OLE DB Root Binder"
-
-[HKEY_CLASSES_ROOT\MSDAINITIALIZE\CLSID]
-@="{6c736db1-bd94-11d0-8a23-00aa00b58e10}"
-
-[HKEY_CLASSES_ROOT\MSDAINITIALIZE.1]
-@="OLE DB Root Binder"
-
-[HKEY_CLASSES_ROOT\MSDAINITIALIZE.1\CLSID]
-@="{6c736db1-bd94-11d0-8a23-00aa00b58e10}"
 EOF_REG
 
 echo "[INFO] Importing registry entries via wine regedit..."

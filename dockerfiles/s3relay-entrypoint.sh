@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-WINE_PREFIX="${WINEPREFIX:-/home/appuser/.win32}"
+WINE_PREFIX="${S3RELAY_WINEPREFIX:-/home/appuser/.win32-s3relay}"
+export WINEPREFIX="${WINE_PREFIX}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 
 mkdir -p /src/paysys/relayserver_log
