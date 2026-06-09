@@ -23,6 +23,7 @@ RUN dpkg --add-architecture i386 \
     && apt-get install -y --no-install-recommends \
         cabextract \
         unzip \
+        winetricks \
         winehq-stable \
         xvfb \
     && apt-get clean \
@@ -37,10 +38,11 @@ WORKDIR /home/appuser
 COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
 COPY paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
 
-RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh
+RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
+    && chown appuser:appgroup /tmp/MDAC_TYP.EXE
 
-# Chạy setup MDAC dưới quyền root để đảm bảo toàn quyền ghi registry hệ thống của Wine
-RUN xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE \
+# Chạy setup MDAC dưới appuser để prefix runtime có đúng owner và HOME.
+RUN su appuser -c 'xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE' \
     && rm -f /tmp/MDAC_TYP.EXE \
     && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak \
     && chown -R appuser:appgroup /home/appuser
@@ -95,7 +97,7 @@ RUN groupadd -g 1000 appgroup \
 
 WORKDIR /src/paysys/
 
-# Copy Wine prefix đã được chuẩn bị từ builder stage
+# Copy Wine prefix đã được chuẩn bị từ builder stage.
 COPY --from=builder --chown=appuser:appgroup /home/appuser/.win32 /home/appuser/.win32
 
 COPY dockerfiles/paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh

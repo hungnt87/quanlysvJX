@@ -19,9 +19,28 @@ fi
 echo "[INFO] Initializing Wine prefix at ${WINE_PREFIX}..."
 mkdir -p "${WINE_PREFIX}"
 export WINEDLLOVERRIDES="mscoree,mshtml=d"
+
+if command -v winetricks >/dev/null 2>&1; then
+    echo "[INFO] Installing MDAC 2.8 with winetricks..."
+    WINETRICKS_CACHE_DIR="${HOME:-/tmp}/.cache/winetricks/mdac28"
+    mkdir -p "${WINETRICKS_CACHE_DIR}"
+    cp -f "${MDAC_EXE}" "${WINETRICKS_CACHE_DIR}/MDAC_TYP.EXE"
+
+    winetricks -q mdac28 || echo "[WARN] winetricks mdac28 returned a non-zero status; validating installed files."
+    wineserver -w || true
+
+    if [ -f "${WINE_PREFIX}/drive_c/Program Files/Common Files/System/ADO/msado27.tlb" ] \
+        || [ -f "${WINE_PREFIX}/drive_c/Program Files/Common Files/System/ADO/msado15.dll" ]; then
+        printf '%s\n' "$(date -Is)" >"${READY_MARKER}"
+        echo "[INFO] MDAC/SQLOLEDB Wine prefix is ready: ${READY_MARKER}"
+        exit 0
+    fi
+
+    echo "[WARN] winetricks did not install MDAC files; falling back to manual extraction."
+fi
+
 wineboot --init
 wineserver -w || true
-
 
 echo "[INFO] Extracting MDAC_TYP.EXE CAB payloads..."
 rm -rf "${EXTRACT_DIR}" "${SQL_OLEDB_DIR}" "${SQL_NET_DIR}" "${SQL_ODBC_DIR}" "${WDSETUP_DIR}" "${MDAC_XPAK_DIR}"

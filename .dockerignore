@@ -2,6 +2,8 @@
 !dockerfiles/
 !dockerfiles/Dockerfile.paysys
 !dockerfiles/paysys-entrypoint.sh
+!dockerfiles/s3relay-entrypoint.sh
 !dockerfiles/paysys-setup-mdac.sh
 !paysyswin/
+paysyswin/*
 !paysyswin/MDAC_TYP.EXE
