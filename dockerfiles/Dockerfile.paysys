@@ -43,6 +43,9 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
 WORKDIR /src/paysys/
 
 RUN mkdir -p /src/paysys/payserver_log \
-    && xvfb-run -a sh -c 'wineboot --init && wineserver -w && winetricks --force -q mdac28 && wineserver -w'
+    && xvfb-run -a sh -c 'wineboot --init && wineserver -w'
 
-CMD [ "sh", "-c", "mkdir -p payserver_log; Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp & sleep 1; exec wine Sword3PaySys.exe" ]
+COPY paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh
+RUN chmod +x /usr/local/bin/paysys-entrypoint.sh
+
+CMD [ "paysys-entrypoint.sh" ]

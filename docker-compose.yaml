@@ -72,4 +72,3 @@ services:
     volumes:
       - "./paysyswin:/src/paysys"
     network_mode: host
-
