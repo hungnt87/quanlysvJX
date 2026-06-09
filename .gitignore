@@ -1,9 +1,13 @@
 /database/
 .env
 .superpowers/
+.playwright-mcp/
 node_modules/
 dist/
 apps/*/dist/
+test-results/
+playwright-report/
+manager-dashboard.png
 /logs/**/*.log
 /logs/**/*.txt
 /logs/**/*.sql

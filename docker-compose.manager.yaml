@@ -11,6 +11,7 @@ services:
       MANAGER_PROJECT_ROOT: /workspace
     volumes:
       - ./:/workspace
+      - manager-api-node-modules:/workspace/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - manager-net
@@ -24,6 +25,7 @@ services:
       VITE_HOST: 0.0.0.0
     volumes:
       - ./:/workspace
+      - manager-web-node-modules:/workspace/node_modules
     networks:
       - manager-net
     restart: unless-stopped
@@ -44,3 +46,7 @@ services:
 networks:
   manager-net:
     driver: bridge
+
+volumes:
+  manager-api-node-modules:
+  manager-web-node-modules:
