@@ -72,3 +72,14 @@ services:
     volumes:
       - "./paysyswin:/src/paysys"
     network_mode: host
+
+  s3relayserver:
+    image: paysys
+    container_name: s3relayserver
+    restart: no
+    tty: true
+    volumes:
+      - "./paysyswin:/src/paysys"
+    network_mode: host
+    command: ["s3relay-entrypoint.sh"]
+

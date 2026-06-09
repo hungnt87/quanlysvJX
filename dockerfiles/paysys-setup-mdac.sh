@@ -2,7 +2,7 @@
 set -eu
 
 MDAC_EXE="${1:-/src/paysys/MDAC_TYP.EXE}"
-WINE_PREFIX="${WINEPREFIX:-/root/.win32}"
+WINE_PREFIX="${WINEPREFIX:-/home/appuser/.win32}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 EXTRACT_DIR="/tmp/mdac-extract"
 SQL_OLEDB_DIR="/tmp/sqloldb"
@@ -16,8 +16,12 @@ if [ ! -f "${MDAC_EXE}" ]; then
     exit 1
 fi
 
-echo "[INFO] Preparing 32-bit Wine prefix directories at ${WINE_PREFIX}..."
+echo "[INFO] Initializing Wine prefix at ${WINE_PREFIX}..."
 mkdir -p "${WINE_PREFIX}"
+export WINEDLLOVERRIDES="mscoree,mshtml=d"
+wineboot --init
+wineserver -w || true
+
 
 echo "[INFO] Extracting MDAC_TYP.EXE CAB payloads..."
 rm -rf "${EXTRACT_DIR}" "${SQL_OLEDB_DIR}" "${SQL_NET_DIR}" "${SQL_ODBC_DIR}" "${WDSETUP_DIR}" "${MDAC_XPAK_DIR}"
@@ -53,6 +57,7 @@ done
 for file in sqloledb.dll sqloledb.rll sqlsoldb.chm; do
     if [ -f "${SQL_OLEDB_DIR}/${file}" ]; then
         cp -f "${SQL_OLEDB_DIR}/${file}" "${OLEDB_DIR}/${file}"
+        cp -f "${SQL_OLEDB_DIR}/${file}" "${SYS32_DIR}/${file}"
     fi
 done
 
@@ -83,199 +88,216 @@ done
 for file in oledb32.dll oledb32r.dll msdasql.dll msdasqlr.dll msdasc.dll msdaer.dll msdatt.dll msdaora.dll msdaorar.dll msdaosp.dll msdaurl.dll msxactps.dll; do
     if [ -f "${MDAC_XPAK_DIR}/${file}" ]; then
         cp -f "${MDAC_XPAK_DIR}/${file}" "${OLEDB_DIR}/${file}"
+        cp -f "${MDAC_XPAK_DIR}/${file}" "${SYS32_DIR}/${file}"
     fi
 done
 
-echo "[INFO] Writing MDAC/SQLOLEDB registry entries without running Wine installers..."
-mkdir -p "${WINE_PREFIX}/dosdevices"
-ln -sfn / "${WINE_PREFIX}/dosdevices/z:"
-ln -sfn ../drive_c "${WINE_PREFIX}/dosdevices/c:"
-touch "${WINE_PREFIX}/.update-timestamp"
+echo "[INFO] Creating temporary registry file..."
+REG_FILE="/tmp/mdac.reg"
+cat >"${REG_FILE}" <<'EOF_REG'
+Windows Registry Editor Version 5.00
 
-cat >"${WINE_PREFIX}/system.reg" <<'EOF_REG'
-WINE REGISTRY Version 2
-;; All keys relative to REGISTRY\Machine
+[HKEY_CURRENT_USER\Software\Wine\DllOverrides]
+"msado15"="native,builtin"
+"msdatl3"="native,builtin"
+"sqloledb"="native"
+"oledb32"="native"
+"msdaps"="native"
+"msdaenum"="native"
+"msdasql"="native,builtin"
 
-#arch=win32
-
-[Software\Classes\ADODB.Connection] 1718512450
+[HKEY_CLASSES_ROOT\ADODB.Connection]
 @="Connection"
 
-[Software\Classes\ADODB.Connection\CLSID] 1718512450
+[HKEY_CLASSES_ROOT\ADODB.Connection\CLSID]
 @="{00000514-0000-0010-8000-00AA006D2EA4}"
 
-[Software\Classes\ADODB.Connection\CurVer] 1718512450
+[HKEY_CLASSES_ROOT\ADODB.Connection\CurVer]
 @="ADODB.Connection.6.0"
 
-[Software\Classes\ADODB.Connection.6.0] 1718512450
+[HKEY_CLASSES_ROOT\ADODB.Connection.6.0]
 @="Connection"
 
-[Software\Classes\ADODB.Connection.6.0\CLSID] 1718512450
+[HKEY_CLASSES_ROOT\ADODB.Connection.6.0\CLSID]
 @="{00000514-0000-0010-8000-00AA006D2EA4}"
 
-[Software\Classes\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}] 1718512450
+[HKEY_CLASSES_ROOT\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}]
 @="Connection"
 
-[Software\Classes\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\InprocServer32] 1718512450
-@="C:\Program Files\Common Files\System\ADO\msado15.dll"
+[HKEY_CLASSES_ROOT\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\InprocServer32]
+@="C:\\Program Files\\Common Files\\System\\ADO\\msado15.dll"
 "ThreadingModel"="Apartment"
 
-[Software\Classes\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\ProgId] 1718512450
+[HKEY_CLASSES_ROOT\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\ProgId]
 @="ADODB.Connection.6.0"
 
-[Software\Classes\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\VersionIndependentProgId] 1718512450
+[HKEY_CLASSES_ROOT\CLSID\{00000514-0000-0010-8000-00AA006D2EA4}\VersionIndependentProgId]
 @="ADODB.Connection"
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}]
 @="SQLOLEDB"
 "OLEDB_SERVICES"=dword:ffffffff
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors]
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ExtendedErrors\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}]
 @="SQLOLEDB Error Lookup"
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\Implemented Categories\{D267E19A-0B97-11D2-BB1C-00C04FC9B532}] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\Implemented Categories\{D267E19A-0B97-11D2-BB1C-00C04FC9B532}]
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\InprocServer32] 1718512603
-@="C:\Program Files\Common Files\System\OLE DB\sqloledb.dll"
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\InprocServer32]
+@="C:\\windows\\system32\\sqloledb.dll"
 "ThreadingModel"="Both"
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\OLE DB Provider] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\OLE DB Provider]
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\ProgID]
 @="SQLOLEDB.1"
 
-[Software\Classes\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\VersionIndependentProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}\VersionIndependentProgID]
 @="SQLOLEDB"
 
-[Software\Classes\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}]
 @="FoxOLEDB 1.0 Object"
 
-[Software\Classes\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\InprocServer32] 1718512600
-@="C:\Program Files\Common Files\System\MSADC\msadce.dll"
+[HKEY_CLASSES_ROOT\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\InprocServer32]
+@="C:\\Program Files\\Common Files\\System\\MSADC\\msadce.dll"
 "ThreadingModel"="both"
 
-[Software\Classes\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\ProgID] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\ProgID]
 @="FX.Rowset.1"
 
-[Software\Classes\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\VersionIndependentProgID] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{3FF292B6-B204-11CF-8D23-00AA005FFE58}\VersionIndependentProgID]
 @="FX.Rowset"
 
-[Software\Classes\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}]
 @="FoxOLEDB 1.0 Object"
 
-[Software\Classes\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\InprocServer32] 1718512600
-@="C:\Program Files\Common Files\System\MSADC\msadce.dll"
+[HKEY_CLASSES_ROOT\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\InprocServer32]
+@="C:\\Program Files\\Common Files\\System\\MSADC\\msadce.dll"
 "ThreadingModel"="both"
 
-[Software\Classes\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\ProgID] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\ProgID]
 @="FX.Rowset.1"
 
-[Software\Classes\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\VersionIndependentProgID] 1718512600
+[HKEY_CLASSES_ROOT\CLSID\{58ECEE30-E715-11CF-B0E3-00AA003F000F}\VersionIndependentProgID]
 @="FX.Rowset"
 
-[Software\Classes\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}]
 @="SQLOLEDB Error Lookup"
 
-[Software\Classes\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\InprocServer32] 1718512603
-@="C:\Program Files\Common Files\System\OLE DB\sqloledb.dll"
+[HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\InprocServer32]
+@="C:\\windows\\system32\\sqloledb.dll"
 "ThreadingModel"="Both"
 
-[Software\Classes\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\ProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\ProgID]
 @="SQLOLEDB ErrorLookup.1"
 
-[Software\Classes\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\VersionIndependentProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{C0932C62-38E5-11d0-97AB-00C04FC2AD98}\VersionIndependentProgID]
 @="SQLOLEDB ErrorLookup"
 
-[Software\Classes\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}]
 @="SQLOLEDB Enumerator"
 
-[Software\Classes\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\InprocServer32] 1718512603
-@="C:\Program Files\Common Files\System\OLE DB\sqloledb.dll"
+[HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\InprocServer32]
+@="C:\\windows\\system32\\sqloledb.dll"
 "ThreadingModel"="Both"
 
-[Software\Classes\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\OLE DB Enumerator] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\OLE DB Enumerator]
 
-[Software\Classes\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\ProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\ProgID]
 @="SQLOLEDB Enumerator.1"
 
-[Software\Classes\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\VersionIndependentProgID] 1718512603
+[HKEY_CLASSES_ROOT\CLSID\{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}\VersionIndependentProgID]
 @="SQLOLEDB Enumerator"
 
-[Software\Classes\FX.Rowset] 1718512600
+[HKEY_CLASSES_ROOT\FX.Rowset]
 @="FoxOLEDB 1.0 Object"
 
-[Software\Classes\FX.Rowset\CLSID] 1718512600
+[HKEY_CLASSES_ROOT\FX.Rowset\CLSID]
 @="{58ECEE30-E715-11CF-B0E3-00AA003F000F}"
 
-[Software\Classes\FX.Rowset.1] 1718512600
+[HKEY_CLASSES_ROOT\FX.Rowset.1]
 @="FoxOLEDB 1.0 Object"
 
-[Software\Classes\FX.Rowset.1\CLSID] 1718512600
+[HKEY_CLASSES_ROOT\FX.Rowset.1\CLSID]
 @="{58ECEE30-E715-11CF-B0E3-00AA003F000F}"
 
-[Software\Classes\SQLOLEDB] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB]
 @="Microsoft OLE DB Provider for SQL Server"
 
-[Software\Classes\SQLOLEDB\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB\Clsid]
 @="{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}"
 
-[Software\Classes\SQLOLEDB Enumerator] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB Enumerator]
 @="Microsoft OLE DB Enumerator for SQL Server"
 
-[Software\Classes\SQLOLEDB Enumerator\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB Enumerator\Clsid]
 @="{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}"
 
-[Software\Classes\SQLOLEDB Enumerator.1] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB Enumerator.1]
 @="Microsoft OLE DB Enumerator for SQL Server"
 
-[Software\Classes\SQLOLEDB Enumerator.1\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB Enumerator.1\Clsid]
 @="{DFA22B8E-E68D-11d0-97E4-00C04FC2AD98}"
 
-[Software\Classes\SQLOLEDB ErrorLookup] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB ErrorLookup]
 @="Microsoft OLE DB Error Lookup for SQL Server"
 
-[Software\Classes\SQLOLEDB ErrorLookup\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB ErrorLookup\Clsid]
 @="{C0932C62-38E5-11d0-97AB-00C04FC2AD98}"
 
-[Software\Classes\SQLOLEDB ErrorLookup.1] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB ErrorLookup.1]
 @="Microsoft OLE DB Error Lookup for SQL Server"
 
-[Software\Classes\SQLOLEDB ErrorLookup.1\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB ErrorLookup.1\Clsid]
 @="{C0932C62-38E5-11d0-97AB-00C04FC2AD98}"
 
-[Software\Classes\SQLOLEDB.1] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB.1]
 @="Microsoft OLE DB Provider for SQL Server"
 
-[Software\Classes\SQLOLEDB.1\Clsid] 1718512603
+[HKEY_CLASSES_ROOT\SQLOLEDB.1\Clsid]
 @="{0C7FF16C-38E3-11d0-97AB-00C04FC2AD98}"
 
-[Software\Classes\Typelib\{2A75196C-D9EB-4129-B803-931327F72D5C}\2.8\0\win32] 1718512450
-@="C:\Program Files\Common Files\System\ADO\msado15.dll"
+[HKEY_CLASSES_ROOT\TypeLib\{2A75196C-D9EB-4129-B803-931327F72D5C}\2.8\0\win32]
+@="C:\\Program Files\\Common Files\\System\\ADO\\msado15.dll"
+
+[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}]
+@="OLE DB Root Binder"
+
+[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}\InprocServer32]
+@="C:\\windows\\system32\\oledb32.dll"
+"ThreadingModel"="Both"
+
+[HKEY_CLASSES_ROOT\CLSID\{6c736db1-bd94-11d0-8a23-00aa00b58e10}\ProgID]
+@="MSDAINITIALIZE.1"
+
+[HKEY_CLASSES_ROOT\MSDAINITIALIZE]
+@="OLE DB Root Binder"
+
+[HKEY_CLASSES_ROOT\MSDAINITIALIZE\CLSID]
+@="{6c736db1-bd94-11d0-8a23-00aa00b58e10}"
+
+[HKEY_CLASSES_ROOT\MSDAINITIALIZE.1]
+@="OLE DB Root Binder"
+
+[HKEY_CLASSES_ROOT\MSDAINITIALIZE.1\CLSID]
+@="{6c736db1-bd94-11d0-8a23-00aa00b58e10}"
 EOF_REG
 
-cat >"${WINE_PREFIX}/user.reg" <<'EOF_REG'
-WINE REGISTRY Version 2
-;; All keys relative to REGISTRY\User\S-1-5-21-0-0-0-1000
+echo "[INFO] Importing registry entries via wine regedit..."
+wine regedit /S "${REG_FILE}"
+wineserver -w || true
+rm -f "${REG_FILE}"
 
-#arch=win32
-
-[Software\Wine\DllOverrides] 1718512560
-"*msado15"="native,builtin"
-"*msdatl3"="native,builtin"
-"*odbc32"="native,builtin"
-"*odbccp32"="native,builtin"
-"*oledb32"="native,builtin"
-"*sqloledb"="native"
-EOF_REG
-
-cat >"${WINE_PREFIX}/userdef.reg" <<'EOF_REG'
-WINE REGISTRY Version 2
-;; All keys relative to REGISTRY\User\Default
-
-#arch=win32
-EOF_REG
+echo "[INFO] Registering OLE DB and ADO DLLs via regsvr32..."
+# Đăng ký tự động các DLL qua regsvr32
+wine regsvr32 /s oledb32.dll || echo "[WARN] Failed to register oledb32.dll via regsvr32"
+wine regsvr32 /s msdaps.dll || echo "[WARN] Failed to register msdaps.dll via regsvr32"
+wine regsvr32 /s msdaenum.dll || echo "[WARN] Failed to register msdaenum.dll via regsvr32"
+wine regsvr32 /s sqloledb.dll || echo "[WARN] Failed to register sqloledb.dll via regsvr32"
+wine regsvr32 /s msado15.dll || echo "[WARN] Failed to register msado15.dll via regsvr32"
+wineserver -w || true
 
 printf '%s\n' "$(date -Is)" >"${READY_MARKER}"
 echo "[INFO] MDAC/SQLOLEDB Wine prefix is ready: ${READY_MARKER}"

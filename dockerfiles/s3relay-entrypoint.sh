@@ -4,7 +4,7 @@ set -eu
 WINE_PREFIX="${WINEPREFIX:-/home/appuser/.win32}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 
-mkdir -p /src/paysys/payserver_log
+mkdir -p /src/paysys/relayserver_log
 
 # Xóa lock file của Xvfb cũ nếu có
 rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 || true
@@ -17,17 +17,10 @@ if [ -f "${READY_MARKER}" ]; then
     echo "[INFO] Using baked MDAC/SQLOLEDB Wine prefix: ${READY_MARKER}"
 else
     echo "[WARN] Baked MDAC/SQLOLEDB marker not found: ${READY_MARKER}"
-    echo "[WARN] Initializing setup..."
-    if [ -f "/src/paysys/MDAC_TYP.EXE" ]; then
-        /usr/local/bin/paysys-setup-mdac.sh /src/paysys/MDAC_TYP.EXE
-    else
-        echo "[ERROR] MDAC_TYP.EXE not found; cannot setup MDAC."
-    fi
 fi
 
 # Vô hiệu hóa Mono và Gecko để tránh treo hộp thoại GUI khi chạy Wine
 export WINEDLLOVERRIDES="mscoree,mshtml=d"
 
-echo "[Paysys] Starting Sword3PaySys.exe..."
-exec wine Sword3PaySys.exe
-
+echo "[S3Relay] Starting S3RelayServer.exe..."
+exec wine S3RelayServer.exe

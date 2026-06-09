@@ -1,12 +1,13 @@
-FROM ubuntu:22.04
+# ==========================================
+# STAGE 1: Builder (Cài đặt & cấu hình MDAC)
+# ==========================================
+FROM ubuntu:22.04 AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Ho_Chi_Minh
 ENV WINEARCH=win32
-ENV WINEPREFIX=/root/.win32
-ENV GNUTLS_SYSTEM_PRIORITY_FILE=/src/paysys/priorityGNU
+ENV WINEPREFIX=/home/appuser/.win32
 ENV DISPLAY=:99
-ENV PATH=/opt/mssql-tools18/bin:${PATH}
 
 RUN dpkg --add-architecture i386 \
     && apt-get update \
@@ -19,42 +20,92 @@ RUN dpkg --add-architecture i386 \
     && wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
     && wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources \
     && apt-get update \
-    && apt-get install -y --install-recommends \
-        procps \
-        iproute2 \
+    && apt-get install -y --no-install-recommends \
         cabextract \
         unzip \
+        winehq-stable \
+        xvfb \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Tạo user appuser (UID/GID 1000)
+RUN groupadd -g 1000 appgroup \
+    && useradd -u 1000 -g appgroup -m -s /bin/bash appuser
+
+WORKDIR /home/appuser
+
+COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
+COPY --chown=appuser:appgroup paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
+
+RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
+    && chown -R appuser:appgroup /home/appuser
+
+# Chạy setup MDAC dưới quyền appuser
+USER appuser
+RUN xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE \
+    && rm -f /tmp/MDAC_TYP.EXE \
+    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak
+
+# ==========================================
+# STAGE 2: Runtime (Image tối giản cuối cùng)
+# ==========================================
+FROM ubuntu:22.04 AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Asia/Ho_Chi_Minh
+ENV WINEARCH=win32
+ENV WINEPREFIX=/home/appuser/.win32
+ENV GNUTLS_SYSTEM_PRIORITY_FILE=/src/paysys/priorityGNU
+ENV DISPLAY=:99
+ENV PATH=/opt/mssql-tools18/bin:${PATH}
+
+# Chỉ cài đặt các gói runtime cần thiết (không cài cabextract, unzip, wget, curl, gnupg)
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+    && mkdir -pm755 /etc/apt/keyrings \
+    && curl -fsSL https://dl.winehq.org/wine-builds/winehq.key -o /etc/apt/keyrings/winehq-archive.key \
+    && curl -fsSL https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources -o /etc/apt/sources.list.d/winehq-jammy.sources \
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
+        | sed -E 's#^deb \[([^]]*)\] #deb [\1 signed-by=/usr/share/keyrings/microsoft-prod.gpg] #; t; s#^deb #deb [signed-by=/usr/share/keyrings/microsoft-prod.gpg] #' \
+        > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends \
+        procps \
+        iproute2 \
         winehq-stable \
         xauth \
         xvfb \
         unixodbc \
         unixodbc-dev \
         winbind \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
-    && curl -fsSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list \
-        | sed -E 's#^deb \[([^]]*)\] #deb [\1 signed-by=/usr/share/keyrings/microsoft-prod.gpg] #; t; s#^deb #deb [signed-by=/usr/share/keyrings/microsoft-prod.gpg] #' \
-        > /etc/apt/sources.list.d/mssql-release.list \
-    && apt-get update \
-    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql18 mssql-tools18 \
+        msodbcsql18 \
+        mssql-tools18 \
     && ln -s /opt/mssql-tools18/bin/sqlcmd /usr/local/bin/sqlcmd \
     && ln -s /opt/mssql-tools18/bin/bcp /usr/local/bin/bcp \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Tạo user appuser trong runtime stage
+RUN groupadd -g 1000 appgroup \
+    && useradd -u 1000 -g appgroup -m -s /bin/bash appuser
+
 WORKDIR /src/paysys/
 
-RUN mkdir -p /src/paysys/payserver_log
+# Copy Wine prefix đã được chuẩn bị từ builder stage
+COPY --from=builder --chown=appuser:appgroup /home/appuser/.win32 /home/appuser/.win32
 
-COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
 COPY dockerfiles/paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh
-COPY paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
+COPY dockerfiles/s3relay-entrypoint.sh /usr/local/bin/s3relay-entrypoint.sh
+RUN chmod +x /usr/local/bin/paysys-entrypoint.sh /usr/local/bin/s3relay-entrypoint.sh \
+    && mkdir -p /src/paysys/payserver_log /src/paysys/relayserver_log \
+    && chown -R appuser:appgroup /src/paysys
 
-RUN chmod +x /usr/local/bin/paysys-entrypoint.sh /usr/local/bin/paysys-setup-mdac.sh \
-    && xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE \
-    && rm -f /tmp/MDAC_TYP.EXE \
-    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak
+# Chạy container dưới quyền user appuser
+USER appuser
 
 CMD [ "paysys-entrypoint.sh" ]
