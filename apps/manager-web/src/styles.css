@@ -1,0 +1,14 @@
+.linkButton {
+  background: transparent;
+  border: 0;
+  color: var(--mantine-color-blue-6);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 600;
+  padding: 0;
+}
+
+.logsBox textarea {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+}
