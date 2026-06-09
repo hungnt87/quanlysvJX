@@ -1,0 +1,46 @@
+services:
+  manager-api:
+    build:
+      context: .
+      dockerfile: manager/Dockerfile.api
+    working_dir: /workspace
+    command: sh -c "npm install && npm --workspace apps/manager-api run dev"
+    environment:
+      MANAGER_API_HOST: 0.0.0.0
+      MANAGER_API_PORT: 3001
+      MANAGER_PROJECT_ROOT: /workspace
+    volumes:
+      - ./:/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - manager-net
+    restart: unless-stopped
+
+  manager-web:
+    image: node:22-alpine
+    working_dir: /workspace
+    command: sh -c "npm install && npm --workspace apps/manager-web run dev -- --host 0.0.0.0"
+    environment:
+      VITE_HOST: 0.0.0.0
+    volumes:
+      - ./:/workspace
+    networks:
+      - manager-net
+    restart: unless-stopped
+
+  manager-proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - "${MANAGER_HTTP_BIND:-0.0.0.0}:80:80"
+    volumes:
+      - ./manager/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - manager-api
+      - manager-web
+    networks:
+      - manager-net
+    restart: unless-stopped
+
+networks:
+  manager-net:
+    driver: bridge
