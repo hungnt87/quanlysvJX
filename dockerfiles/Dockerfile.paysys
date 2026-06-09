@@ -10,22 +10,27 @@ ENV PATH=/opt/mssql-tools18/bin:${PATH}
 
 RUN dpkg --add-architecture i386 \
     && apt-get update \
-    && apt-get install -y --install-recommends \
+    && apt-get install -y --no-install-recommends \
         ca-certificates \
-        procps \
-        cabextract \
         curl \
         gnupg \
-        unzip \
         wget \
+    && mkdir -pm755 /etc/apt/keyrings \
+    && wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key \
+    && wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources \
+    && apt-get update \
+    && apt-get install -y --install-recommends \
+        procps \
+        iproute2 \
+        cabextract \
+        unzip \
         winetricks \
-        wine \
-        wine32 \
-        wine64 \
+        winehq-stable \
         xauth \
         xvfb \
         unixodbc \
         unixodbc-dev \
+        winbind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -42,8 +47,7 @@ RUN curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor
 
 WORKDIR /src/paysys/
 
-RUN mkdir -p /src/paysys/payserver_log \
-    && xvfb-run -a sh -c 'wineboot --init && wineserver -w'
+RUN mkdir -p /src/paysys/payserver_log
 
 COPY paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh
 RUN chmod +x /usr/local/bin/paysys-entrypoint.sh
