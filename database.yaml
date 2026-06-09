@@ -21,7 +21,8 @@ services:
        TZ: "Asia/Ho_Chi_Minh"
    volumes:
         - ./database/mssql/data:/var/opt/mssql/data
+        - ./database/mssql/certs:/var/opt/mssql/certs:ro
+        - ./database/mssql/mssql.conf:/var/opt/mssql/mssql.conf:ro
         - /etc/localtime:/etc/localtime:ro
-        - /home/database_backups:/home/database_backups
    mem_limit: 1g
    network_mode: host
