@@ -1,5 +1,6 @@
 /database/
 .env
+.superpowers/
 /logs/**/*.log
 /logs/**/*.txt
 /logs/**/*.sql
