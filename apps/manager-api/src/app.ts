@@ -4,6 +4,7 @@ import { fail } from './api/envelope.js';
 import { AppError } from './api/errors.js';
 import { loadConfig, type ManagerConfig } from './config.js';
 import { registerHealthRoutes } from './routes/healthRoutes.js';
+import { registerLogRoutes } from './routes/logRoutes.js';
 import { registerServiceRoutes } from './routes/serviceRoutes.js';
 import { runDockerCompose, type CommandResult } from './services/composeRunner.js';
 
@@ -35,6 +36,7 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
 
   await registerHealthRoutes(app);
   await registerServiceRoutes(app);
+  await registerLogRoutes(app);
   return app;
 }
 
