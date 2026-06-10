@@ -1,0 +1,45 @@
+import { Alert, Stack, Table, Text } from '@mantine/core';
+import { useEffect, useState } from 'react';
+import { api } from '../../api/client';
+import type { BackupSettings } from '../../api/types';
+
+type Props = {
+  onError: (message: string) => void;
+};
+
+export function BackupSettingsTab({ onError }: Props) {
+  const [settings, setSettings] = useState<BackupSettings | null>(null);
+
+  useEffect(() => {
+    api.backupSettings()
+      .then(setSettings)
+      .catch((error) => onError(error instanceof Error ? error.message : 'Unable to load backup settings'));
+  }, [onError]);
+
+  if (!settings) {
+    return <Text c="dimmed">Loading backup settings...</Text>;
+  }
+
+  return (
+    <Stack gap="md">
+      <Alert color="blue">Backup paths are managed by server environment configuration.</Alert>
+      <Table withTableBorder>
+        <Table.Tbody>
+          <SettingRow label="MySQL backup directory" value={settings.mysqlBackupDir} />
+          <SettingRow label="MSSQL backup directory" value={settings.mssqlBackupDir} />
+          <SettingRow label="Metadata file" value={settings.backupMetadataFile} />
+          <SettingRow label="Schedule file" value={settings.backupScheduleFile} />
+        </Table.Tbody>
+      </Table>
+    </Stack>
+  );
+}
+
+function SettingRow({ label, value }: { label: string; value: string }) {
+  return (
+    <Table.Tr>
+      <Table.Th w={260}>{label}</Table.Th>
+      <Table.Td><Text ff="monospace" size="sm">{value}</Text></Table.Td>
+    </Table.Tr>
+  );
+}
