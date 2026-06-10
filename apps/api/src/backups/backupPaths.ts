@@ -5,13 +5,13 @@ export type BackupKind = 'mysql' | 'mssql';
 
 export function buildBackupFilename(kind: BackupKind, date = new Date()) {
   const stamp = [
-    date.getUTCFullYear(),
-    pad(date.getUTCMonth() + 1),
-    pad(date.getUTCDate()),
+    date.getFullYear(),
+    pad(date.getMonth() + 1),
+    pad(date.getDate()),
     '-',
-    pad(date.getUTCHours()),
-    pad(date.getUTCMinutes()),
-    pad(date.getUTCSeconds())
+    pad(date.getHours()),
+    pad(date.getMinutes()),
+    pad(date.getSeconds())
   ].join('');
 
   return kind === 'mysql' ? `mysql-${stamp}.sql.gz` : `mssql-${stamp}.bak`;
