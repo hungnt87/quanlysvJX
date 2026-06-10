@@ -40,8 +40,8 @@ export async function registerVersionRoutes(app: FastifyInstance) {
   const versionsDir = getVersionsDir(projectRoot);
 
   fs.mkdirSync(versionsDir, { recursive: true });
-  try { fs.chmodSync(versionsDir, 0o777); } catch {}
-  try { fs.chownSync(versionsDir, 1000, 1000); } catch {}
+  try { fs.chmodSync(versionsDir, 0o777); } catch { void 0; }
+  try { fs.chownSync(versionsDir, 1000, 1000); } catch { void 0; }
 
   app.get('/api/versions', async () => {
     try {
@@ -89,8 +89,8 @@ export async function registerVersionRoutes(app: FastifyInstance) {
       const registry = ensureVersionRegistry(projectRoot);
       assertVersionNameAvailable(projectRoot, registry, targetName);
       runCommand('git', ['clone', '--depth', '1', '-b', branch, url, targetDir]);
-      try { runCommand('chmod', ['-R', '777', targetDir]); } catch {}
-      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch {}
+      try { runCommand('chmod', ['-R', '777', targetDir]); } catch { void 0; }
+      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch { void 0; }
       const hasServerDir = fs.existsSync(path.join(targetDir, 'server'));
       return ok(createVersionRecord(projectRoot, {
         name: targetName,
@@ -140,8 +140,8 @@ export async function registerVersionRoutes(app: FastifyInstance) {
           writeStream.on('finish', resolve);
           writeStream.on('error', reject);
         });
-        try { fs.chmodSync(tempArchivePath, 0o777); } catch {}
-        try { fs.chownSync(tempArchivePath, 1000, 1000); } catch {}
+        try { fs.chmodSync(tempArchivePath, 0o777); } catch { void 0; }
+        try { fs.chownSync(tempArchivePath, 1000, 1000); } catch { void 0; }
       }
 
       if (!name) {
@@ -157,11 +157,11 @@ export async function registerVersionRoutes(app: FastifyInstance) {
 
       const targetDir = path.join(versionsDir, targetName);
       fs.mkdirSync(targetDir, { recursive: true });
-      try { fs.chmodSync(targetDir, 0o777); } catch {}
-      try { fs.chownSync(targetDir, 1000, 1000); } catch {}
+      try { fs.chmodSync(targetDir, 0o777); } catch { void 0; }
+      try { fs.chownSync(targetDir, 1000, 1000); } catch { void 0; }
       extractArchive(tempArchivePath, filename, targetDir);
-      try { runCommand('chmod', ['-R', '777', targetDir]); } catch {}
-      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch {}
+      try { runCommand('chmod', ['-R', '777', targetDir]); } catch { void 0; }
+      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch { void 0; }
       const hasServerDir = fs.existsSync(path.join(targetDir, 'server'));
       return ok(createVersionRecord(projectRoot, {
         name: targetName,

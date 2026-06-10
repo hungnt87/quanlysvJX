@@ -39,16 +39,16 @@ export function writeUploadedBackupFile(args: FileDeps & { kind: BackupKind; fil
   validateBackupExtension(args.kind, args.filename);
   const directory = getBackupDirectory(args.kind, args);
   mkdirSync(directory, { recursive: true });
-  try { chmodSync(directory, 0o777); } catch {}
-  try { chownSync(directory, 1000, 1000); } catch {}
+  try { chmodSync(directory, 0o777); } catch { void 0; }
+  try { chownSync(directory, 1000, 1000); } catch { void 0; }
   const target = assertBackupFile(directory, args.filename);
   if (existsSync(target)) {
     throw new ValidationError('Backup file already exists');
   }
 
   writeFileSync(target, args.data);
-  try { chmodSync(target, 0o777); } catch {}
-  try { chownSync(target, 1000, 1000); } catch {}
+  try { chmodSync(target, 0o777); } catch { void 0; }
+  try { chownSync(target, 1000, 1000); } catch { void 0; }
   const now = args.now?.() ?? new Date();
   upsertBackupMetadata(args.backupMetadataFile, {
     kind: args.kind,

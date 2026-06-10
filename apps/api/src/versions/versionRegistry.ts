@@ -68,8 +68,8 @@ export function ensureVersionRegistry(projectRoot: string): VersionRegistry {
   const versionsDir = getVersionsDir(projectRoot);
   const registryPath = getRegistryPath(projectRoot);
   mkdirSync(versionsDir, { recursive: true });
-  try { chmodSync(versionsDir, 0o777); } catch {}
-  try { chownSync(versionsDir, 1000, 1000); } catch {}
+  try { chmodSync(versionsDir, 0o777); } catch { void 0; }
+  try { chownSync(versionsDir, 1000, 1000); } catch { void 0; }
 
   if (existsSync(registryPath)) {
     const parsed = versionRegistrySchema.parse(JSON.parse(readFileSync(registryPath, 'utf8')));
@@ -103,15 +103,15 @@ export function writeVersionRegistry(projectRoot: string, registry: VersionRegis
   const parsed = versionRegistrySchema.parse(registry);
   const registryPath = getRegistryPath(projectRoot);
   mkdirSync(path.dirname(registryPath), { recursive: true });
-  try { chmodSync(path.dirname(registryPath), 0o777); } catch {}
-  try { chownSync(path.dirname(registryPath), 1000, 1000); } catch {}
+  try { chmodSync(path.dirname(registryPath), 0o777); } catch { void 0; }
+  try { chownSync(path.dirname(registryPath), 1000, 1000); } catch { void 0; }
   const tempPath = `${registryPath}.tmp`;
   writeFileSync(tempPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
-  try { chmodSync(tempPath, 0o777); } catch {}
-  try { chownSync(tempPath, 1000, 1000); } catch {}
+  try { chmodSync(tempPath, 0o777); } catch { void 0; }
+  try { chownSync(tempPath, 1000, 1000); } catch { void 0; }
   renameSync(tempPath, registryPath);
-  try { chmodSync(registryPath, 0o777); } catch {}
-  try { chownSync(registryPath, 1000, 1000); } catch {}
+  try { chmodSync(registryPath, 0o777); } catch { void 0; }
+  try { chownSync(registryPath, 1000, 1000); } catch { void 0; }
 }
 
 export function createVersionRecord(projectRoot: string, options: CreateVersionOptions): GameVersionRecord {
