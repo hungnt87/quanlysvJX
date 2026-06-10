@@ -1,7 +1,9 @@
 import Fastify from 'fastify';
+import multipart from '@fastify/multipart';
 import sensible from '@fastify/sensible';
 import { fail } from './api/envelope.js';
 import { AppError } from './api/errors.js';
+import { startBackupScheduler } from './backups/backupScheduler.js';
 import { loadConfig, type ManagerConfig } from './config.js';
 import { registerBackupRoutes } from './routes/backupRoutes.js';
 import { registerHealthRoutes } from './routes/healthRoutes.js';
@@ -30,6 +32,7 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
 
   const app = Fastify({ logger: true });
   await app.register(sensible);
+  await app.register(multipart);
   app.decorate('deps', deps);
 
   app.setErrorHandler((error, _request, reply) => {
@@ -51,6 +54,14 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
   await registerServiceRoutes(app);
   await registerLogRoutes(app);
   await registerBackupRoutes(app);
+
+  if (config.schedulerEnabled) {
+    const scheduledTask = startBackupScheduler(deps);
+    app.addHook('onClose', () => {
+      scheduledTask.stop();
+    });
+  }
+
   return app;
 }
 
