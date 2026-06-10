@@ -18,4 +18,13 @@ describe('backup job store', () => {
 
     expect(() => store.startJob('mysql')).toThrow('Job already running for mysql');
   });
+
+  it('records database kind and trigger metadata', () => {
+    const store = createJobStore(() => new Date('2026-06-10T03:00:00.000Z'));
+
+    const job = store.startJob({ kind: 'backup', database: 'mysql', trigger: 'schedule' });
+
+    expect(job).toMatchObject({ kind: 'backup', database: 'mysql', trigger: 'schedule', status: 'running' });
+    expect(store.hasRunningJob('mysql')).toBe(true);
+  });
 });

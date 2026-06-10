@@ -20,6 +20,7 @@ const schedulesSchema = z.object({
 
 export type DatabaseBackupSchedule = z.infer<typeof scheduleSchema>;
 export type BackupScheduleConfig = z.infer<typeof schedulesSchema>;
+export type BackupDayOfWeek = z.infer<typeof daySchema>;
 
 export function defaultBackupSchedules(): BackupScheduleConfig {
   const disabled: DatabaseBackupSchedule = {
