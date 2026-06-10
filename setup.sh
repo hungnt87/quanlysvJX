@@ -8,6 +8,7 @@ echo " Đang tạo các thư mục lưu trữ dữ liệu cho JX..."
 echo "=========================================================="
 
 # 1. Tạo các thư mục chứa dữ liệu và cấu hình
+mkdir -p apps/jx-services/mount/config
 mkdir -p apps/jx-services/mount/database/mysql_server1/data
 mkdir -p apps/jx-services/mount/database/backups/mysql
 mkdir -p apps/jx-services/mount/database/mssql/data

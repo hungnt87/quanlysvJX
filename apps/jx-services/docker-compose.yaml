@@ -10,7 +10,6 @@ services:
     mem_limit: 1g
     volumes:
       - ./mount/database/mysql_server1/data:/var/lib/mysql
-      - ./mount/config/docker.cnf:/etc/mysql/conf.d/docker.cnf:ro
     networks:
       - jxnet
     restart: unless-stopped

@@ -1,7 +1,6 @@
 name: quanlysvjx-manager
 
 x-manager-host-root: &manager-host-root ${MANAGER_PROJECT_ROOT:-${PWD}}
-x-manager-container-root: &manager-container-root /workspace
 
 services:
   api:
@@ -13,11 +12,11 @@ services:
       COMPOSE_PROJECT_NAME: quanlysvjx
       MANAGER_API_HOST: 0.0.0.0
       MANAGER_API_PORT: 3001
-      MANAGER_PROJECT_ROOT: *manager-container-root
+      MANAGER_PROJECT_ROOT: *manager-host-root
     volumes:
       - type: bind
         source: *manager-host-root
-        target: *manager-container-root
+        target: *manager-host-root
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
