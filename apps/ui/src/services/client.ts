@@ -63,5 +63,7 @@ export const api = {
   deleteGameAccount: (accountName: string) =>
     request<{ message: string }>(`/api/game-accounts/${encodeURIComponent(accountName)}`, { method: 'DELETE' }),
   banGameAccount: (accountName: string) =>
-    request<GameAccount>(`/api/game-accounts/${encodeURIComponent(accountName)}/ban`, { method: 'POST' })
+    request<GameAccount>(`/api/game-accounts/${encodeURIComponent(accountName)}/ban`, { method: 'POST' }),
+  unbanGameAccount: (accountName: string) =>
+    request<GameAccount>(`/api/game-accounts/${encodeURIComponent(accountName)}/unban`, { method: 'POST' })
 };

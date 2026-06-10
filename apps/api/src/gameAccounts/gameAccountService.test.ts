@@ -10,6 +10,7 @@ function fakeRepository(overrides: Partial<GameAccountRepository> = {}): GameAcc
     create: vi.fn().mockResolvedValue(undefined),
     update: vi.fn().mockResolvedValue(undefined),
     ban: vi.fn().mockResolvedValue(undefined),
+    unban: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),
     ...overrides
   };

@@ -24,6 +24,7 @@ export type GameAccountRepository = {
   create: (record: CreateGameAccountRecord) => Promise<void>;
   update: (accountName: string, record: UpdateGameAccountRecord) => Promise<void>;
   ban: (accountName: string) => Promise<void>;
+  unban: (accountName: string) => Promise<void>;
   delete: (accountName: string) => Promise<void>;
 };
 
@@ -91,6 +92,16 @@ export function createGameAccountService(repository: GameAccountRepository) {
       await repository.ban(accountName);
       const updated = await repository.findByName(accountName);
       return updated ?? { ...current, status: 'banned' };
+    },
+
+    async unban(accountName: string): Promise<GameAccountView> {
+      const current = await repository.findByName(accountName);
+      if (!current) {
+        throw new NotFoundError('Account not found');
+      }
+      await repository.unban(accountName);
+      const updated = await repository.findByName(accountName);
+      return updated ?? { ...current, status: 'active' };
     },
 
     async delete(accountName: string): Promise<void> {

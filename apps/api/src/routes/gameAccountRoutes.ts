@@ -29,4 +29,9 @@ export async function registerGameAccountRoutes(app: FastifyInstance) {
     const { accountName } = request.params as { accountName: string };
     return ok(await app.deps.gameAccounts.ban(accountName));
   });
+
+  app.post('/api/game-accounts/:accountName/unban', async (request) => {
+    const { accountName } = request.params as { accountName: string };
+    return ok(await app.deps.gameAccounts.unban(accountName));
+  });
 }

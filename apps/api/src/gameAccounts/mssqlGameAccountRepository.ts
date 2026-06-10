@@ -193,6 +193,25 @@ export function createMssqlGameAccountRepository(config: MssqlConfig): GameAccou
       }
     },
 
+    async unban(accountName: string) {
+      const transaction = new sql.Transaction(await pool());
+      await transaction.begin();
+      try {
+        await new sql.Request(transaction)
+          .input('accountName', sql.VarChar(32), accountName)
+          .query('UPDATE dbo.Account_Info SET bIsBanned = 0 WHERE cAccName = @accountName');
+
+        await new sql.Request(transaction)
+          .input('accountName', sql.VarChar(32), accountName)
+          .query('DELETE FROM dbo.Account_Ban WHERE cAccName = @accountName');
+
+        await transaction.commit();
+      } catch (error) {
+        await transaction.rollback();
+        throw error;
+      }
+    },
+
     async delete(accountName: string) {
       const transaction = new sql.Transaction(await pool());
       await transaction.begin();

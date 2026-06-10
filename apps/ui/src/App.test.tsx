@@ -29,7 +29,8 @@ vi.mock('@/services/client', () => ({
     createGameAccount: vi.fn(),
     updateGameAccount: vi.fn(),
     deleteGameAccount: vi.fn(),
-    banGameAccount: vi.fn()
+    banGameAccount: vi.fn(),
+    unbanGameAccount: vi.fn()
   }
 }));
 

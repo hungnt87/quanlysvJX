@@ -8,6 +8,7 @@ import { EditGameAccountModal } from './EditGameAccountModal';
 import { GameAccountTable } from './GameAccountTable';
 import { SoftDeleteAccountModal } from './SoftDeleteAccountModal';
 import { BanAccountModal } from './BanAccountModal';
+import { UnbanAccountModal } from './UnbanAccountModal';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -22,6 +23,7 @@ export function GameAccountPanel(props: Props) {
   const [editingAccount, setEditingAccount] = useState<GameAccount | null>(null);
   const [deletingAccount, setDeletingAccount] = useState<GameAccount | null>(null);
   const [banningAccount, setBanningAccount] = useState<GameAccount | null>(null);
+  const [unbanningAccount, setUnbanningAccount] = useState<GameAccount | null>(null);
   const [createOpened, setCreateOpened] = useState(false);
 
   const accountsQuery = useQuery({
@@ -58,6 +60,12 @@ export function GameAccountPanel(props: Props) {
     onError: (error) => props.onError(error instanceof Error ? error.message : 'Không thể khóa tài khoản')
   });
 
+  const unbanMutation = useMutation({
+    mutationFn: api.unbanGameAccount,
+    onSuccess: async () => { props.onSuccess('Đã mở khóa tài khoản'); setUnbanningAccount(null); await invalidateAccounts(); },
+    onError: (error) => props.onError(error instanceof Error ? error.message : 'Không thể mở khóa tài khoản')
+  });
+
   return (
     <Stack>
       <Group align="end">
@@ -73,7 +81,7 @@ export function GameAccountPanel(props: Props) {
         />
         <Button onClick={() => setCreateOpened(true)}>Thêm tài khoản</Button>
       </Group>
-      <GameAccountTable accounts={data.items} onEdit={setEditingAccount} onDelete={setDeletingAccount} onBan={setBanningAccount} />
+      <GameAccountTable accounts={data.items} onEdit={setEditingAccount} onDelete={setDeletingAccount} onBan={setBanningAccount} onUnban={setUnbanningAccount} />
       {data.pagination.total > pageSize && <Pagination total={data.pagination.totalPages} value={page} onChange={setPage} />}
       <CreateGameAccountModal
         opened={createOpened}
@@ -101,6 +109,13 @@ export function GameAccountPanel(props: Props) {
         loading={banMutation.isPending}
         onClose={() => setBanningAccount(null)}
         onConfirm={() => banningAccount && banMutation.mutate(banningAccount.accountName)}
+      />
+      <UnbanAccountModal
+        opened={unbanningAccount !== null}
+        account={unbanningAccount}
+        loading={unbanMutation.isPending}
+        onClose={() => setUnbanningAccount(null)}
+        onConfirm={() => unbanningAccount && unbanMutation.mutate(unbanningAccount.accountName)}
       />
     </Stack>
   );

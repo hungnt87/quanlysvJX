@@ -26,6 +26,7 @@ function fakeService(): GameAccountService {
     create: vi.fn().mockResolvedValue({ accountName: 'newuser', expiresAt: '2027-06-10', leftSeconds: 0, usedSeconds: 0, status: 'active' }),
     update: vi.fn().mockResolvedValue({ accountName: 'jxuser', expiresAt: '2028-01-01', leftSeconds: 5, usedSeconds: 0, status: 'active' }),
     ban: vi.fn().mockResolvedValue({ accountName: 'jxuser', expiresAt: '2028-01-01', leftSeconds: 5, usedSeconds: 0, status: 'banned' }),
+    unban: vi.fn().mockResolvedValue({ accountName: 'jxuser', expiresAt: '2028-01-01', leftSeconds: 5, usedSeconds: 0, status: 'active' }),
     delete: vi.fn().mockResolvedValue(undefined)
   };
 }
@@ -64,6 +65,17 @@ describe('game account routes', () => {
     expect(response.statusCode).toBe(200);
     expect(response.json().data.status).toBe('banned');
     expect(service.ban).toHaveBeenCalledWith('jxuser');
+  });
+
+  it('unbans accounts', async () => {
+    const service = fakeService();
+    const app = await buildApp({ config: testConfig(mkdtempSync(path.join(tmpdir(), 'manager-'))), gameAccounts: service });
+
+    const response = await app.inject({ method: 'POST', url: '/api/game-accounts/jxuser/unban' });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().data.status).toBe('active');
+    expect(service.unban).toHaveBeenCalledWith('jxuser');
   });
 
   it('hard deletes accounts', async () => {
