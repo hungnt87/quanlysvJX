@@ -1,6 +1,6 @@
-import { MantineProvider } from '@mantine/core';
-import { render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, screen } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderWithProviders } from '../../test/renderWithProviders';
 import { BackupPanel } from './BackupPanel';
 
 vi.mock('../../api/client', () => ({
@@ -23,17 +23,24 @@ vi.mock('../../api/client', () => ({
   }
 }));
 
-describe('BackupPanel', () => {
-  it('renders backup workspace tabs', async () => {
-    render(
-      <MantineProvider>
-        <BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />
-      </MantineProvider>
-    );
+describe('BackupPanel routing', () => {
+  afterEach(() => cleanup());
+
+  it('selects Schedule tab from /backup/schedule', async () => {
+    renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, { route: '/backup/schedule' });
 
     expect(await screen.findByRole('tab', { name: 'Files' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Schedule' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Jobs' })).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Settings' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Schedule' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('navigates to jobs when Jobs tab is clicked', async () => {
+    renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, { route: '/backup/files' });
+
+    fireEvent.click(await screen.findByRole('tab', { name: 'Jobs' }));
+
+    expect(screen.getByRole('tab', { name: 'Jobs' }).getAttribute('aria-selected')).toBe('true');
   });
 });
