@@ -1,4 +1,4 @@
-import { mkdirSync } from 'node:fs';
+import { chmodSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { CommandError } from '../api/errors.js';
 import type { AppDeps } from '../app.js';
@@ -8,6 +8,11 @@ const databaseName = 'account_tong';
 
 export async function backupMssql(deps: AppDeps) {
   mkdirSync(deps.config.mssqlBackupDir, { recursive: true });
+  try {
+    chmodSync(deps.config.mssqlBackupDir, 0o777);
+  } catch {
+    // Ignore chmod failures
+  }
   const filename = buildBackupFilename('mssql');
   const hostPath = path.join(deps.config.mssqlBackupDir, filename);
   const sql = `BACKUP DATABASE [${databaseName}] TO DISK = N'/var/opt/mssql/data/database_backups/${filename}' WITH INIT`;
