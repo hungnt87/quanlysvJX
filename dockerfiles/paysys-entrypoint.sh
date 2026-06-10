@@ -30,5 +30,48 @@ fi
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-mscoree,mshtml,winevulkan=d}"
 export WINEDEBUG="${WINEDEBUG:--vulkan,-ntoskrnl,-service,-ole,-ntdll,-sync}"
 
+DATABASE_INI="/src/paysys/database.ini"
+if [ -f "$DATABASE_INI" ]; then
+    echo "[Paysys] Checking encrypted database settings..."
+    
+    # Tạo file tạm để sửa đổi tránh lỗi busy
+    TEMP_INI="/tmp/database.ini.tmp"
+    cp "$DATABASE_INI" "$TEMP_INI"
+    
+    # Chỉ cập nhật khi người dùng điền giá trị cụ thể và khác 'auto' hoặc rỗng
+    # Nếu là 'auto' hoặc rỗng, giữ nguyên giá trị sẵn có trong database.ini
+    UPDATED=0
+    
+    if [ -n "${JX_MSSQL_IP_ENCRYPTED:-}" ] && [ "$JX_MSSQL_IP_ENCRYPTED" != "auto" ]; then
+        echo "-> Updating Server IP in database.ini"
+        sed -i -E "s/^([[:space:]]*Server[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_IP_ENCRYPTED/g" "$TEMP_INI"
+        UPDATED=1
+    fi
+    
+    if [ -n "${JX_MSSQL_DB_ENCRYPTED:-}" ] && [ "$JX_MSSQL_DB_ENCRYPTED" != "auto" ]; then
+        echo "-> Updating Database Name in database.ini"
+        sed -i -E "s/^([[:space:]]*DataBase[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_DB_ENCRYPTED/g" "$TEMP_INI"
+        UPDATED=1
+    fi
+
+    if [ -n "${JX_MSSQL_USER_ENCRYPTED:-}" ] && [ "$JX_MSSQL_USER_ENCRYPTED" != "auto" ]; then
+        echo "-> Updating User in database.ini"
+        sed -i -E "s/^([[:space:]]*User[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_USER_ENCRYPTED/g" "$TEMP_INI"
+        UPDATED=1
+    fi
+
+    if [ -n "${JX_MSSQL_PASS_ENCRYPTED:-}" ] && [ "$JX_MSSQL_PASS_ENCRYPTED" != "auto" ]; then
+        echo "-> Updating PassWord in database.ini"
+        sed -i -E "s/^([[:space:]]*PassWord[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_PASS_ENCRYPTED/g" "$TEMP_INI"
+        UPDATED=1
+    fi
+
+    # Chỉ ghi đè lại file gốc nếu có cập nhật
+    if [ "$UPDATED" -eq 1 ]; then
+        cat "$TEMP_INI" > "$DATABASE_INI"
+    fi
+    rm -f "$TEMP_INI"
+fi
+
 echo "[Paysys] Starting Sword3PaySys.exe..."
 exec wine Sword3PaySys.exe

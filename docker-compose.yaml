@@ -10,7 +10,7 @@ services:
     mem_limit: 1g
     volumes:
       - ./database/mysql_server1/data:/var/lib/mysql
-      - ./settings/docker.cnf:/etc/mysql/conf.d/docker.cnf:ro
+      - ./config/docker.cnf:/etc/mysql/conf.d/docker.cnf:ro
     networks:
       - jxnet
     restart: unless-stopped
@@ -57,8 +57,13 @@ services:
     ipc: host
     environment:
       - DISPLAY=:99
+      - JX_MSSQL_IP_ENCRYPTED=${JX_MSSQL_IP_ENCRYPTED}
+      - JX_MSSQL_DB_ENCRYPTED=${JX_MSSQL_DB_ENCRYPTED}
+      - JX_MSSQL_USER_ENCRYPTED=${JX_MSSQL_USER_ENCRYPTED}
+      - JX_MSSQL_PASS_ENCRYPTED=${JX_MSSQL_PASS_ENCRYPTED}
     volumes:
       - "./paysyswin:/src/paysys"
+      - "./config/paysys/database.ini:/src/paysys/database.ini"
     network_mode: host
     depends_on:
       jxmysql:
@@ -80,8 +85,13 @@ services:
     ipc: host
     environment:
       - DISPLAY=:98
+      - JX_MSSQL_IP_ENCRYPTED=${JX_MSSQL_IP_ENCRYPTED}
+      - JX_MSSQL_DB_ENCRYPTED=${JX_MSSQL_DB_ENCRYPTED}
+      - JX_MSSQL_USER_ENCRYPTED=${JX_MSSQL_USER_ENCRYPTED}
+      - JX_MSSQL_PASS_ENCRYPTED=${JX_MSSQL_PASS_ENCRYPTED}
     volumes:
       - "./paysyswin:/src/paysys"
+      - "./config/paysys/database.ini:/src/paysys/database.ini"
     network_mode: host
     depends_on:
       paysys:
@@ -105,9 +115,15 @@ services:
     container_name: goddess
     restart: no
     tty: true
+    environment:
+      - JX_IP=${JX_IP:-auto}
+      - JX_MYSQL_IP=${JX_MYSQL_IP}
+      - APP_CMD=goddess_y
     volumes:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
-      - "./settings/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
+      - "./config/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
+      - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
+    entrypoint: ["/bin/bash", "/src/entrypoint.sh"]
     network_mode: host
     depends_on:
       s3relayserver:
@@ -130,9 +146,15 @@ services:
     container_name: bishop
     restart: no
     tty: true
+    environment:
+      - JX_IP=${JX_IP:-auto}
+      - JX_PAYSYS_IP=${JX_PAYSYS_IP}
+      - APP_CMD=bishop_y
     volumes:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
-      - "./settings/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
+      - "./config/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
+      - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
+    entrypoint: ["/bin/bash", "/src/entrypoint.sh"]
     network_mode: host
     depends_on:
       goddess:
@@ -155,10 +177,15 @@ services:
     container_name: s3relay
     restart: no
     tty: true
+    environment:
+      - JX_IP=${JX_IP:-auto}
+      - JX_MYSQL_IP=${JX_MYSQL_IP}
+      - APP_CMD=s3relay_y
     volumes:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
-      - "./settings/gateway/relay_config.ini:/src/jxser/gateway/s3relay/relay_config.ini"
-      - "./settings/gateway/hostset.ini:/src/jxser/gateway/s3relay/settings/hostset.ini"
+      - "./config/gateway/relay_config.ini:/src/jxser/gateway/s3relay/relay_config.ini"
+      - "./config/gateway/hostset.ini:/src/jxser/gateway/s3relay/settings/hostset.ini"
+      - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
       - ./logs/gateway/Logs:/src/jxser/gateway/Logs
       - ./logs/gateway/Backup:/src/jxser/gateway/Backup
       - ./logs/gateway/roleback:/src/jxser/gateway/roleback
@@ -166,6 +193,7 @@ services:
       - ./logs/gateway/s3relay/Logs:/src/jxser/gateway/s3relay/Logs
       - ./logs/gateway/s3relay/relay_logs:/src/jxser/gateway/s3relay/relay_logs
       - ./logs/gateway/s3relay/RelayRunData:/src/jxser/gateway/s3relay/RelayRunData
+    entrypoint: ["/bin/bash", "/src/entrypoint.sh"]
     network_mode: host
     depends_on:
       bishop:
@@ -188,14 +216,19 @@ services:
     container_name: jxserver
     restart: no
     tty: true
+    environment:
+      - JX_IP=${JX_IP:-auto}
+      - APP_CMD=jx_linux_y
     volumes:
       - "${SERVER_PATH}/server1:/src/jxser/server1/"
-      - "./settings/gs1/servercf0.ini:/src/jxser/server1/servercf0.ini"
+      - "./config/gs1/servercf0.ini:/src/jxser/server1/servercf0.ini"
+      - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
       - ./logs/server1/Logs:/src/jxser/server1/Logs
       - ./logs/server1/itemexchange_setting/rolevalue_log:/src/jxser/server1/itemexchange_setting/rolevalue_log
       - "./script/camnangvozer.lua:/src/jxser/server1/script/global/mel/item/camnangvozer.lua"
       - "./script/configserver.lua:/src/jxser/server1/script/global/mel/configserver.lua"
-      - "./settings/npcs.txt:/src/jxser/server1/settings/npcs.txt"
+      - "./config/npcs.txt:/src/jxser/server1/settings/npcs.txt"
+    entrypoint: ["/bin/bash", "/src/entrypoint.sh"]
     network_mode: host
     depends_on:
       s3relay:
