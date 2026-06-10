@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { chmodSync, chownSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
 
@@ -68,6 +68,8 @@ export function ensureVersionRegistry(projectRoot: string): VersionRegistry {
   const versionsDir = getVersionsDir(projectRoot);
   const registryPath = getRegistryPath(projectRoot);
   mkdirSync(versionsDir, { recursive: true });
+  try { chmodSync(versionsDir, 0o777); } catch {}
+  try { chownSync(versionsDir, 1000, 1000); } catch {}
 
   if (existsSync(registryPath)) {
     const parsed = versionRegistrySchema.parse(JSON.parse(readFileSync(registryPath, 'utf8')));
@@ -101,9 +103,15 @@ export function writeVersionRegistry(projectRoot: string, registry: VersionRegis
   const parsed = versionRegistrySchema.parse(registry);
   const registryPath = getRegistryPath(projectRoot);
   mkdirSync(path.dirname(registryPath), { recursive: true });
+  try { chmodSync(path.dirname(registryPath), 0o777); } catch {}
+  try { chownSync(path.dirname(registryPath), 1000, 1000); } catch {}
   const tempPath = `${registryPath}.tmp`;
   writeFileSync(tempPath, `${JSON.stringify(parsed, null, 2)}\n`, 'utf8');
+  try { chmodSync(tempPath, 0o777); } catch {}
+  try { chownSync(tempPath, 1000, 1000); } catch {}
   renameSync(tempPath, registryPath);
+  try { chmodSync(registryPath, 0o777); } catch {}
+  try { chownSync(registryPath, 1000, 1000); } catch {}
 }
 
 export function createVersionRecord(projectRoot: string, options: CreateVersionOptions): GameVersionRecord {

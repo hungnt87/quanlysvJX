@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
+import { chmodSync, chownSync, existsSync, mkdirSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { ValidationError } from '../api/errors.js';
 import { getMetadataKey, readMetadataIndex, removeBackupMetadata, upsertBackupMetadata } from './backupMetadata.js';
@@ -39,12 +39,16 @@ export function writeUploadedBackupFile(args: FileDeps & { kind: BackupKind; fil
   validateBackupExtension(args.kind, args.filename);
   const directory = getBackupDirectory(args.kind, args);
   mkdirSync(directory, { recursive: true });
+  try { chmodSync(directory, 0o777); } catch {}
+  try { chownSync(directory, 1000, 1000); } catch {}
   const target = assertBackupFile(directory, args.filename);
   if (existsSync(target)) {
     throw new ValidationError('Backup file already exists');
   }
 
   writeFileSync(target, args.data);
+  try { chmodSync(target, 0o777); } catch {}
+  try { chownSync(target, 1000, 1000); } catch {}
   const now = args.now?.() ?? new Date();
   upsertBackupMetadata(args.backupMetadataFile, {
     kind: args.kind,

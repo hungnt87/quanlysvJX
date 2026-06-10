@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync } from 'node:fs';
+import { chmodSync, chownSync, mkdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
@@ -8,6 +8,8 @@ import { assertBackupFile, buildBackupFilename } from './backupPaths.js';
 
 export async function backupMysql(deps: AppDeps) {
   mkdirSync(deps.config.mysqlBackupDir, { recursive: true });
+  try { chmodSync(deps.config.mysqlBackupDir, 0o777); } catch {}
+  try { chownSync(deps.config.mysqlBackupDir, 1000, 1000); } catch {}
   const filename = buildBackupFilename('mysql');
   const hostPath = path.join(deps.config.mysqlBackupDir, filename);
   const result = await deps.runCompose([
@@ -24,6 +26,8 @@ export async function backupMysql(deps: AppDeps) {
   }
 
   await writeFile(hostPath, gzipSync(Buffer.from(result.stdout, 'utf8')));
+  try { chmodSync(hostPath, 0o777); } catch {}
+  try { chownSync(hostPath, 1000, 1000); } catch {}
   return { kind: 'mysql' as const, filename, path: hostPath };
 }
 

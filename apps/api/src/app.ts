@@ -39,7 +39,11 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
 
   const app = Fastify({ logger: true });
   await app.register(sensible);
-  await app.register(multipart);
+  await app.register(multipart, {
+    limits: {
+      fileSize: 2 * 1024 * 1024 * 1024 // 2GB
+    }
+  });
   app.decorate('deps', deps);
 
   app.setErrorHandler((error, _request, reply) => {
