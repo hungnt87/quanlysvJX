@@ -23,6 +23,8 @@ services:
         source: api-node-modules
         target: ${MANAGER_PROJECT_ROOT:-${PWD}}/node_modules
       - /var/run/docker.sock:/var/run/docker.sock
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
     networks:
       - manager-net
     extra_hosts:
