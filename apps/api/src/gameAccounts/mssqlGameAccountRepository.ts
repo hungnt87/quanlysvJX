@@ -169,18 +169,19 @@ export function createMssqlGameAccountRepository(config: MssqlConfig): GameAccou
       try {
         await new sql.Request(transaction)
           .input('accountName', sql.VarChar(32), accountName)
-          .query('UPDATE dbo.Account_Info SET bIsBanned = 1 WHERE cAccName = @accountName');
+          .query('DELETE FROM dbo.Account_Ban WHERE cAccName = @accountName');
 
         await new sql.Request(transaction)
           .input('accountName', sql.VarChar(32), accountName)
-          .input('endDate', sql.DateTime, '2050-10-10T10:10:10')
-          .query(`
-            IF NOT EXISTS (SELECT 1 FROM dbo.Account_Ban WHERE cAccName = @accountName)
-            BEGIN
-              INSERT INTO dbo.Account_Ban (cAccName, dStartDate, dEndDate, iEndTime, cReason, cOperator, bIsBannedForever)
-              VALUES (@accountName, GETDATE(), @endDate, 0, N'Deleted from manager', 'manager', 1)
-            END
-          `);
+          .query('DELETE FROM dbo.Account_Habitus WHERE cAccName = @accountName');
+
+        await new sql.Request(transaction)
+          .input('accountName', sql.VarChar(32), accountName)
+          .query('DELETE FROM dbo.Account_Info WHERE cAccName = @accountName');
+
+        await new sql.Request(transaction)
+          .input('accountName', sql.VarChar(32), accountName)
+          .query('DELETE FROM dbo.Account_Info2 WHERE cAccName = @accountName');
 
         await transaction.commit();
       } catch (error) {

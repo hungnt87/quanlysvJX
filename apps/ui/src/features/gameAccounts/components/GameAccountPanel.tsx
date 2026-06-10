@@ -46,8 +46,8 @@ export function GameAccountPanel(props: Props) {
 
   const softDeleteMutation = useMutation({
     mutationFn: api.softDeleteGameAccount,
-    onSuccess: async () => { props.onSuccess('Đã ban tài khoản'); setDeletingAccount(null); await invalidateAccounts(); },
-    onError: (error) => props.onError(error instanceof Error ? error.message : 'Không thể ban tài khoản')
+    onSuccess: async () => { props.onSuccess('Đã xóa tài khoản'); setDeletingAccount(null); await invalidateAccounts(); },
+    onError: (error) => props.onError(error instanceof Error ? error.message : 'Không thể xóa tài khoản')
   });
 
   return (

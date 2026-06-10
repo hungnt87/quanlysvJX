@@ -25,6 +25,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - manager-net
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   ui:
