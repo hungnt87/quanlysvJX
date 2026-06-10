@@ -6,6 +6,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { api } from '@/services/client';
 import type { ServiceStatus } from '@/services/types';
 import { BackupPanel } from '@/features/backup';
+import { GameAccountPanel } from '@/features/gameAccounts';
 import { LogsPanel } from '@/features/logs';
 import { ServiceActionModal } from '@/features/services';
 import { ServiceTable } from '@/features/services';
@@ -22,7 +23,11 @@ export function App() {
   const [selectedService, setSelectedService] = useState<string | null>('all');
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [loadingAction, setLoadingAction] = useState(false);
-  const activeRootTab = location.pathname.startsWith('/backup') ? 'backup' : 'dashboard';
+  const activeRootTab = location.pathname.startsWith('/backup')
+    ? 'backup'
+    : location.pathname.startsWith('/game-accounts')
+      ? 'game-accounts'
+      : 'dashboard';
   const servicesQuery = useQuery({
     queryKey: ['services'],
     queryFn: api.services,
@@ -86,10 +91,11 @@ export function App() {
           </Group>
         </AppShell.Header>
         <AppShell.Main>
-          <Tabs value={activeRootTab} onChange={(value) => navigate(value === 'backup' ? '/backup/files' : '/dashboard')}>
+          <Tabs value={activeRootTab} onChange={(value) => navigate(value === 'backup' ? '/backup/files' : value === 'game-accounts' ? '/game-accounts' : '/dashboard')}>
             <Tabs.List mb="md">
-              <Tabs.Tab value="dashboard">Bảng điều khiển & Logs</Tabs.Tab>
+              <Tabs.Tab value="dashboard">Bảng điều khiển &amp; Logs</Tabs.Tab>
               <Tabs.Tab value="backup">Sao lưu (Backup)</Tabs.Tab>
+              <Tabs.Tab value="game-accounts">Tài khoản game</Tabs.Tab>
             </Tabs.List>
           </Tabs>
           <Routes>
@@ -112,6 +118,10 @@ export function App() {
               element={
               <BackupPanel onSuccess={showSuccess} onError={showError} />
               }
+            />
+            <Route
+              path="/game-accounts"
+              element={<GameAccountPanel onSuccess={showSuccess} onError={showError} />}
             />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -24,7 +24,11 @@ vi.mock('@/services/client', () => ({
       mssqlBackupDir: '/mssql',
       backupMetadataFile: '/backup-metadata.json',
       backupScheduleFile: '/backup-schedules.json'
-    })
+    }),
+    gameAccounts: vi.fn().mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 1 } }),
+    createGameAccount: vi.fn(),
+    updateGameAccount: vi.fn(),
+    softDeleteGameAccount: vi.fn()
   }
 }));
 
@@ -63,5 +67,12 @@ describe('App routing', () => {
     expect(await screen.findByRole('tab', { name: 'Files' })).toBeTruthy();
     await waitFor(() => expect(api.backups).toHaveBeenCalledTimes(1));
     expect(api.services).not.toHaveBeenCalled();
+  });
+
+  it('shows game account tab and route', async () => {
+    renderWithProviders(<App />, { route: '/game-accounts' });
+
+    expect(await screen.findByRole('tab', { name: 'Tài khoản game' })).toBeTruthy();
+    expect(screen.getByPlaceholderText('Tìm theo tên tài khoản')).toBeTruthy();
   });
 });

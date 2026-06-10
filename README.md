@@ -23,3 +23,20 @@ For a localhost-only bind, run:
 ```bash
 MANAGER_HTTP_BIND=127.0.0.1 docker compose -f docker-compose.manager.yaml up --build
 ```
+
+## Game account management MSSQL settings
+
+The account manager uses the `account_tong` MSSQL database. Configure credentials with environment variables:
+
+```bash
+MSSQL_HOST=localhost
+MSSQL_PORT=1433
+MSSQL_DATABASE=account_tong
+MSSQL_USER=sa
+MSSQL_PASSWORD=<set locally>
+MSSQL_ENCRYPT=false
+MSSQL_TRUST_SERVER_CERTIFICATE=true
+```
+
+The app does not hardcode MSSQL username or password. Account delete in the UI is a soft delete: it bans the account and keeps rows visible in the list.
+
