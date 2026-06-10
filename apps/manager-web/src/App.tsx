@@ -1,4 +1,4 @@
-import { AppShell, Button, Grid, Group, MantineProvider, Stack, Text, Title } from '@mantine/core';
+import { AppShell, Button, Grid, Group, MantineProvider, Stack, Text, Title, Tabs } from '@mantine/core';
 import { Notifications, notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api/client';
@@ -15,7 +15,7 @@ type PendingAction = { service: string; action: 'stop' | 'restart' } | null;
 
 export function App() {
   const [services, setServices] = useState<ServiceStatus[]>([]);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>('all');
   const [pendingAction, setPendingAction] = useState<PendingAction>(null);
   const [loadingAction, setLoadingAction] = useState(false);
 
@@ -31,7 +31,7 @@ export function App() {
     try {
       const nextServices = await api.services();
       setServices(nextServices);
-      setSelectedService((current) => current ?? nextServices[0]?.name ?? null);
+      setSelectedService((current) => current ?? 'all');
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Unable to load services');
     }
@@ -86,17 +86,27 @@ export function App() {
           </Group>
         </AppShell.Header>
         <AppShell.Main>
-          <Grid align="stretch">
-            <Grid.Col span={{ base: 12, lg: 7 }}>
-              <ServiceTable services={services} selected={selectedService} onSelect={setSelectedService} onAction={runAction} />
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, lg: 5 }}>
-              <Stack>
-                <LogsPanel services={services.map((service) => service.name)} selected={selectedService} onSelect={setSelectedService} onError={showError} />
-                <BackupPanel onSuccess={showSuccess} onError={showError} />
-              </Stack>
-            </Grid.Col>
-          </Grid>
+          <Tabs defaultValue="dashboard">
+            <Tabs.List mb="md">
+              <Tabs.Tab value="dashboard">Bảng điều khiển & Logs</Tabs.Tab>
+              <Tabs.Tab value="backup">Sao lưu (Backup)</Tabs.Tab>
+            </Tabs.List>
+
+            <Tabs.Panel value="dashboard">
+              <Grid align="stretch">
+                <Grid.Col span={{ base: 12, md: 3 }}>
+                  <ServiceTable services={services} selected={selectedService} onSelect={setSelectedService} onAction={runAction} />
+                </Grid.Col>
+                <Grid.Col span={{ base: 12, md: 9 }}>
+                  <LogsPanel services={services.map((service) => service.name)} selected={selectedService} onSelect={setSelectedService} onError={showError} />
+                </Grid.Col>
+              </Grid>
+            </Tabs.Panel>
+
+            <Tabs.Panel value="backup">
+              <BackupPanel onSuccess={showSuccess} onError={showError} />
+            </Tabs.Panel>
+          </Tabs>
         </AppShell.Main>
       </AppShell>
       <ServiceActionModal

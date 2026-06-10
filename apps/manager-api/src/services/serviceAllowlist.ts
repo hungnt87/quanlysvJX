@@ -20,3 +20,11 @@ export function assertServiceName(value: string): ServiceName {
 
   throw new ValidationError(`Unsupported service: ${value}`);
 }
+
+export function assertLogServiceName(value: string): ServiceName | 'all' {
+  if (value === 'all' || (serviceNames as readonly string[]).includes(value)) {
+    return value as ServiceName | 'all';
+  }
+
+  throw new ValidationError(`Unsupported service: ${value}`);
+}
