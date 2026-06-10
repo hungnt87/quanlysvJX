@@ -100,6 +100,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   // Hàm render từng dòng log có màu sắc
   const renderLogLines = () => {
     const stripAnsi = (str: string) => 
+      // eslint-disable-next-line no-control-regex
       str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
 
     const formatTimestamp = (tsStr: string) => {

@@ -12,7 +12,8 @@ export default [
       'logs/**',
       'paysyswin/**',
       '.agents/**',
-      '.superpowers/**'
+      '.superpowers/**',
+      'apps/jx-services/mount/**'
     ]
   },
   js.configs.recommended,

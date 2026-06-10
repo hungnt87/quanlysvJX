@@ -1,4 +1,4 @@
-import { AppShell, Button, Grid, Group, MantineProvider, Stack, Text, Title, Tabs } from '@mantine/core';
+import { AppShell, Button, Grid, Group, MantineProvider, Text, Title, Tabs } from '@mantine/core';
 import { Notifications, notifications } from '@mantine/notifications';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from './api/client';
