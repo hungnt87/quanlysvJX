@@ -19,6 +19,7 @@
     "zod": "latest"
   },
   "devDependencies": {
+    "@types/mssql": "^12.3.0",
     "@types/node": "latest",
     "tsx": "latest",
     "vitest": "latest"
