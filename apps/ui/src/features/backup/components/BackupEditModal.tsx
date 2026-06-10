@@ -1,6 +1,6 @@
 import { Button, Group, Modal, Textarea, TextInput } from '@mantine/core';
 import { useEffect, useState } from 'react';
-import type { BackupFile } from '../../api/types';
+import type { BackupFile } from '@/services/types';
 
 type Props = {
   opened: boolean;

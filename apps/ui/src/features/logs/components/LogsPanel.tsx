@@ -1,7 +1,7 @@
 import { Button, Group, NumberInput, Paper, Select, Stack, Switch, Text, Box, ScrollArea } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { api } from '../../api/client';
+import { api } from '@/services/client';
 
 type Props = {
   services: string[];

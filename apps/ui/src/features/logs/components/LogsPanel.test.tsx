@@ -1,10 +1,10 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { api } from '../../api/client';
-import { renderWithProviders } from '../../test/renderWithProviders';
-import { LogsPanel } from './LogsPanel';
+import { api } from '@/services/client';
+import { renderWithProviders } from '@/utils/test/renderWithProviders';
+import { LogsPanel } from '@/features/logs';
 
-vi.mock('../../api/client', () => ({
+vi.mock('@/services/client', () => ({
   api: {
     logs: vi.fn(),
     logStreamUrl: vi.fn((service: string, tail: number) => `/api/services/${service}/logs/stream?tail=${tail}`)

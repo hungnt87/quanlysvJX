@@ -1,12 +1,12 @@
 import { Badge, Button, Group, Select, Stack, Table, Text, TextInput } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
-import { api } from '../../api/client';
-import type { BackupFile, BackupKind } from '../../api/types';
-import { BackupEditModal } from './BackupEditModal';
-import { BackupUploadModal } from './BackupUploadModal';
-import { DeleteBackupModal } from './DeleteBackupModal';
-import { RestoreModal } from './RestoreModal';
+import { api } from '@/services/client';
+import type { BackupFile, BackupKind } from '@/services/types';
+import { BackupEditModal } from '@/features/backup/components/BackupEditModal';
+import { BackupUploadModal } from '@/features/backup/components/BackupUploadModal';
+import { DeleteBackupModal } from '@/features/backup/components/DeleteBackupModal';
+import { RestoreModal } from '@/features/backup/components/RestoreModal';
 
 type Props = {
   onSuccess: (message: string) => void;

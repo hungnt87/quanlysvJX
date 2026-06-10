@@ -8,7 +8,7 @@ import type {
   BackupSettings,
   DatabaseBackupSchedule,
   ServiceStatus
-} from './types';
+} from '@/services/types';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const isFormData = init?.body instanceof FormData;

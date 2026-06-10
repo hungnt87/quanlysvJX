@@ -1,9 +1,9 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { renderWithProviders } from '../../test/renderWithProviders';
-import { BackupPanel } from './BackupPanel';
+import { renderWithProviders } from '@/utils/test/renderWithProviders';
+import { BackupPanel } from '@/features/backup';
 
-vi.mock('../../api/client', () => ({
+vi.mock('@/services/client', () => ({
   api: {
     backups: vi.fn().mockResolvedValue([]),
     jobs: vi.fn().mockResolvedValue([]),

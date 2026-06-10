@@ -1,8 +1,8 @@
 import { Button, Checkbox, Group, NumberInput, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
-import { api } from '../../api/client';
-import type { BackupKind, DatabaseBackupSchedule } from '../../api/types';
+import { api } from '@/services/client';
+import type { BackupKind, DatabaseBackupSchedule } from '@/services/types';
 
 type Props = {
   onSuccess: (message: string) => void;

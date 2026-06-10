@@ -1,5 +1,5 @@
 import { Alert, Button, Group, Modal, Text } from '@mantine/core';
-import type { BackupFile } from '../../api/types';
+import type { BackupFile } from '@/services/types';
 
 type Props = {
   opened: boolean;

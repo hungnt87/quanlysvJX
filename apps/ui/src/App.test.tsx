@@ -1,10 +1,10 @@
 import { cleanup, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { App } from './App';
-import { api } from './api/client';
-import { renderWithProviders } from './test/renderWithProviders';
+import { App } from '@/App';
+import { api } from '@/services/client';
+import { renderWithProviders } from '@/utils/test/renderWithProviders';
 
-vi.mock('./api/client', () => ({
+vi.mock('@/services/client', () => ({
   api: {
     services: vi.fn().mockResolvedValue([]),
     action: vi.fn(),

@@ -1,7 +1,7 @@
 import { Alert, Stack, Table, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect } from 'react';
-import { api } from '../../api/client';
+import { api } from '@/services/client';
 
 type Props = {
   onError: (message: string) => void;

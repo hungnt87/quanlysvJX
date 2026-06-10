@@ -1,8 +1,8 @@
 import { MantineProvider } from '@mantine/core';
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import type { ServiceStatus } from '../../api/types';
-import { ServiceTable } from './ServiceTable';
+import type { ServiceStatus } from '@/services/types';
+import { ServiceTable } from '@/features/services';
 
 const services: ServiceStatus[] = [
   {

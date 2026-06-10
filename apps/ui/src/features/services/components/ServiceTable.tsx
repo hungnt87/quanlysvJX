@@ -1,5 +1,5 @@
 import { Badge, Button, Group, Table, Text, Tooltip } from '@mantine/core';
-import type { ServiceStatus } from '../../api/types';
+import type { ServiceStatus } from '@/services/types';
 
 type Props = {
   services: ServiceStatus[];

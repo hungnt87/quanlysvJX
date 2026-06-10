@@ -3,15 +3,15 @@ import { Notifications, notifications } from '@mantine/notifications';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useState } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { api } from './api/client';
-import type { ServiceStatus } from './api/types';
-import { BackupPanel } from './features/backups/BackupPanel';
-import { LogsPanel } from './features/logs/LogsPanel';
-import { ServiceActionModal } from './features/services/ServiceActionModal';
-import { ServiceTable } from './features/services/ServiceTable';
+import { api } from '@/services/client';
+import type { ServiceStatus } from '@/services/types';
+import { BackupPanel } from '@/features/backup';
+import { LogsPanel } from '@/features/logs';
+import { ServiceActionModal } from '@/features/services';
+import { ServiceTable } from '@/features/services';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import './styles.css';
+import '@/assets/styles/styles.css';
 
 type PendingAction = { service: string; action: 'stop' | 'restart' } | null;
 

@@ -1,9 +1,9 @@
 import { Paper, Tabs } from '@mantine/core';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { BackupFilesTab } from './BackupFilesTab';
-import { BackupJobsTab } from './BackupJobsTab';
-import { BackupScheduleTab } from './BackupScheduleTab';
-import { BackupSettingsTab } from './BackupSettingsTab';
+import { BackupFilesTab } from '@/features/backup/components/BackupFilesTab';
+import { BackupJobsTab } from '@/features/backup/components/BackupJobsTab';
+import { BackupScheduleTab } from '@/features/backup/components/BackupScheduleTab';
+import { BackupSettingsTab } from '@/features/backup/components/BackupSettingsTab';
 
 type Props = {
   onSuccess: (message: string) => void;

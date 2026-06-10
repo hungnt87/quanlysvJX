@@ -1,6 +1,6 @@
 import { Button, FileInput, Group, Modal, Select } from '@mantine/core';
 import { useEffect, useState } from 'react';
-import type { BackupKind } from '../../api/types';
+import type { BackupKind } from '@/services/types';
 
 type Props = {
   opened: boolean;
