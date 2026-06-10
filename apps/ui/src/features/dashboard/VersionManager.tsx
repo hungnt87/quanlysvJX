@@ -34,7 +34,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
     queryFn: api.versions
   });
 
-  const { activeVersion, versions = [] } = versionsQuery.data ?? { activeVersion: null, versions: [] };
+  const { versions = [] } = versionsQuery.data ?? { versions: [] };
 
   const selectMutation = useMutation({
     mutationFn: api.selectVersion,

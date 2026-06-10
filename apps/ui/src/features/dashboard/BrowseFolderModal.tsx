@@ -8,7 +8,6 @@ import {
   Text,
   List,
   ThemeIcon,
-  ActionIcon,
   Loader,
   Alert
 } from '@mantine/core';

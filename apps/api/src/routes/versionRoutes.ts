@@ -93,17 +93,16 @@ export async function registerVersionRoutes(app: FastifyInstance) {
       throw app.httpErrors.notFound('Version folder not found');
     }
 
-    let finalSubPath = '';
     if (subPath) {
       const resolvedSub = path.resolve(targetDir, subPath);
       if (!resolvedSub.startsWith(targetDir) || !fs.existsSync(resolvedSub)) {
         throw app.httpErrors.badRequest('Invalid subPath');
       }
-      finalSubPath = subPath.endsWith('/') ? subPath : `${subPath}/`;
-    } else {
-      const hasServerDir = fs.existsSync(path.join(targetDir, 'server'));
-      finalSubPath = hasServerDir ? 'server/' : '';
     }
+
+    const finalSubPath = subPath
+      ? (subPath.endsWith('/') ? subPath : `${subPath}/`)
+      : (fs.existsSync(path.join(targetDir, 'server')) ? 'server/' : '');
 
     const serverPathValue = `./apps/jx-services/versions/${name}/${finalSubPath}`;
 
