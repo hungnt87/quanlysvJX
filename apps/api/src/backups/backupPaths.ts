@@ -37,6 +37,10 @@ export function assertBackupFile(directory: string, filename: string) {
   return resolvedFile;
 }
 
+export function getBackupDirectory(kind: BackupKind, directories: { mysqlBackupDir: string; mssqlBackupDir: string }) {
+  return kind === 'mysql' ? directories.mysqlBackupDir : directories.mssqlBackupDir;
+}
+
 function pad(value: number) {
   return String(value).padStart(2, '0');
 }
