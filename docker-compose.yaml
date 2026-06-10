@@ -9,6 +9,7 @@ services:
       dockerfile: apps/api/Dockerfile
     working_dir: *manager-project-root
     command: sh -c "npm install && npm --workspace apps/api run dev"
+    env_file: .env
     environment:
       COMPOSE_PROJECT_NAME: quanlysvjx
       MANAGER_API_HOST: 0.0.0.0

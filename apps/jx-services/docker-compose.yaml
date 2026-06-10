@@ -102,7 +102,7 @@ services:
       timeout: 3s
       retries: 30
       start_period: 5s
-      command: [ "s3relay-entrypoint.sh" ]
+    command: [ "s3relay-entrypoint.sh" ]
 
   goddess:
     build:
