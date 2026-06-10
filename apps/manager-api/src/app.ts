@@ -31,6 +31,11 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
       return;
     }
 
+    if (isHttpClientError(error)) {
+      void reply.status(error.statusCode).send(fail(error.message));
+      return;
+    }
+
     app.log.error({ err: error }, 'Unhandled manager API error');
     void reply.status(500).send(fail('Unexpected server error'));
   });
@@ -40,6 +45,19 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
   await registerLogRoutes(app);
   await registerBackupRoutes(app);
   return app;
+}
+
+function isHttpClientError(error: unknown): error is { statusCode: number; message: string } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'statusCode' in error &&
+    'message' in error &&
+    typeof error.statusCode === 'number' &&
+    error.statusCode >= 400 &&
+    error.statusCode < 500 &&
+    typeof error.message === 'string'
+  );
 }
 
 declare module 'fastify' {

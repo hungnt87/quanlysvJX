@@ -1,7 +1,8 @@
 import type { ApiEnvelope, BackupList, ServiceStatus } from './types';
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { headers: { 'Content-Type': 'application/json' }, ...init });
+  const headers = init?.body === undefined ? init?.headers : { 'Content-Type': 'application/json', ...init.headers };
+  const response = await fetch(url, { ...init, headers });
   const body = (await response.json()) as ApiEnvelope<T>;
 
   if (!body.success) {
