@@ -1,5 +1,6 @@
 import { Button, Group, NumberInput, Paper, Select, Stack, Switch, Text, Box, ScrollArea } from '@mantine/core';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../../api/client';
 
 type Props = {
@@ -26,7 +27,6 @@ const SERVICE_COLORS: Record<string, string> = {
 export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   const [tail, setTail] = useState(300);
   const [logs, setLogs] = useState('');
-  const [loading, setLoading] = useState(false);
   const [autoFollow, setAutoFollow] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(false);
   const [streamReady, setStreamReady] = useState(false);
@@ -36,23 +36,29 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
   const activeService = selected || 'all';
 
-  const loadLogs = useCallback(async () => {
-    setLoading(true);
-    setStreamReady(false);
-    try {
-      setLogs((await api.logs(activeService, tail)).logs);
-      shouldFollowRef.current = true;
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Unable to load logs');
-    } finally {
-      setLoading(false);
-      setStreamReady(true);
-    }
-  }, [onError, activeService, tail]);
+  const logsQuery = useQuery({
+    queryKey: ['logs', activeService, tail],
+    queryFn: () => api.logs(activeService, tail),
+    retry: false
+  });
 
   useEffect(() => {
-    void loadLogs();
-  }, [loadLogs]);
+    setStreamReady(false);
+  }, [activeService, tail]);
+
+  useEffect(() => {
+    if (logsQuery.isError) {
+      onError(logsQuery.error instanceof Error ? logsQuery.error.message : 'Unable to load logs');
+      setStreamReady(true);
+      return;
+    }
+
+    if (logsQuery.data) {
+      setLogs(logsQuery.data.logs);
+      shouldFollowRef.current = true;
+      setStreamReady(true);
+    }
+  }, [logsQuery.data, logsQuery.error, logsQuery.isError, onError]);
 
   useEffect(() => {
     if (!autoFollow || !streamReady) return undefined;
@@ -231,7 +237,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
             <Button variant="default" onClick={() => setLogs('')}>Clear</Button>
             <Button variant="light" onClick={() => onSelect('all')}>Tất cả</Button>
           </Group>
-          <Button loading={loading} onClick={loadLogs}>Refresh logs</Button>
+          <Button loading={logsQuery.isFetching} onClick={() => logsQuery.refetch()}>Refresh logs</Button>
         </Group>
         
         {/* Custom Terminal View wrapper for floating button */}

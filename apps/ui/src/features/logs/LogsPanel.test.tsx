@@ -1,7 +1,7 @@
-import { MantineProvider } from '@mantine/core';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { api } from '../../api/client';
+import { renderWithProviders } from '../../test/renderWithProviders';
 import { LogsPanel } from './LogsPanel';
 
 vi.mock('../../api/client', () => ({
@@ -42,11 +42,7 @@ describe('LogsPanel', () => {
   });
 
   it('loads a snapshot and starts realtime streaming when a service is selected', async () => {
-    render(
-      <MantineProvider>
-        <LogsPanel services={['jxmysql']} selected="jxmysql" onSelect={vi.fn()} onError={vi.fn()} />
-      </MantineProvider>
-    );
+    renderWithProviders(<LogsPanel services={['jxmysql']} selected="jxmysql" onSelect={vi.fn()} onError={vi.fn()} />);
 
     await waitFor(() => expect(api.logs).toHaveBeenCalledWith('jxmysql', 300));
     await screen.findByText('snapshot');
