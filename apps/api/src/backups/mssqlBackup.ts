@@ -26,7 +26,15 @@ export async function backupMssql(deps: AppDeps) {
 }
 
 export async function restoreMssql(deps: AppDeps, filename: string) {
-  const sql = `RESTORE DATABASE [${databaseName}] FROM DISK = N'/var/opt/mssql/data/database_backups/${filename}' WITH REPLACE`;
+  const sql = `
+    IF DB_ID('${databaseName}') IS NOT NULL
+      ALTER DATABASE [${databaseName}] SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    
+    RESTORE DATABASE [${databaseName}] FROM DISK = N'/var/opt/mssql/data/database_backups/${filename}' WITH REPLACE;
+    
+    IF DB_ID('${databaseName}') IS NOT NULL
+      ALTER DATABASE [${databaseName}] SET MULTI_USER;
+  `;
   const result = await runSqlcmd(deps, sql);
 
   if (result.exitCode !== 0) {
