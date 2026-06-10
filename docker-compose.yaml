@@ -1,27 +1,23 @@
 name: quanlysvjx-manager
 
-x-manager-project-root: &manager-project-root ${MANAGER_PROJECT_ROOT:-${PWD}}
+x-manager-host-root: &manager-host-root ${MANAGER_PROJECT_ROOT:-${PWD}}
+x-manager-container-root: &manager-container-root /workspace
 
 services:
   api:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    working_dir: *manager-project-root
-    command: sh -c "npm install && npm --workspace apps/api run dev"
     env_file: .env
     environment:
       COMPOSE_PROJECT_NAME: quanlysvjx
       MANAGER_API_HOST: 0.0.0.0
       MANAGER_API_PORT: 3001
-      MANAGER_PROJECT_ROOT: *manager-project-root
+      MANAGER_PROJECT_ROOT: *manager-container-root
     volumes:
       - type: bind
-        source: *manager-project-root
-        target: *manager-project-root
-      - type: volume
-        source: api-node-modules
-        target: ${MANAGER_PROJECT_ROOT:-${PWD}}/node_modules
+        source: *manager-host-root
+        target: *manager-container-root
       - /var/run/docker.sock:/var/run/docker.sock
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
@@ -32,31 +28,13 @@ services:
     restart: unless-stopped
 
   ui:
-    image: node:22-alpine
-    working_dir: *manager-project-root
-    command: sh -c "npm install && npm --workspace apps/ui run dev -- --host 0.0.0.0"
-    environment:
-      VITE_HOST: 0.0.0.0
-    volumes:
-      - type: bind
-        source: *manager-project-root
-        target: *manager-project-root
-      - type: volume
-        source: ui-node-modules
-        target: ${MANAGER_PROJECT_ROOT:-${PWD}}/node_modules
-    networks:
-      - manager-net
-    restart: unless-stopped
-
-  proxy:
-    image: nginx:1.27-alpine
+    build:
+      context: .
+      dockerfile: apps/ui/Dockerfile
     ports:
-      - "${MANAGER_HTTP_BIND:-0.0.0.0}:80:80"
-    volumes:
-      - ./apps/ui/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - "${MANAGER_HTTP_BIND:-0.0.0.0}:${MANAGER_HTTP_PORT:-80}:80"
     depends_on:
       - api
-      - ui
     networks:
       - manager-net
     restart: unless-stopped
@@ -64,7 +42,3 @@ services:
 networks:
   manager-net:
     driver: bridge
-
-volumes:
-  api-node-modules:
-  ui-node-modules:
