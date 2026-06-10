@@ -1,4 +1,5 @@
 import { Badge, Button, Group, Select, Stack, Table, Text, TextInput } from '@mantine/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import type { BackupFile, BackupKind } from '../../api/types';
@@ -15,35 +16,47 @@ type Props = {
 type FilterKind = 'all' | BackupKind;
 
 export function BackupFilesTab({ onSuccess, onError }: Props) {
-  const [files, setFiles] = useState<BackupFile[]>([]);
+  const queryClient = useQueryClient();
   const [filterKind, setFilterKind] = useState<FilterKind>('all');
   const [query, setQuery] = useState('');
-  const [loading, setLoading] = useState(false);
   const [uploadOpened, setUploadOpened] = useState(false);
   const [editingFile, setEditingFile] = useState<BackupFile | null>(null);
   const [deletingFile, setDeletingFile] = useState<BackupFile | null>(null);
   const [restoringFile, setRestoringFile] = useState<BackupFile | null>(null);
+  const filesQuery = useQuery({ queryKey: ['backups'], queryFn: api.backups });
+  const files = filesQuery.data ?? [];
 
-  async function refresh() {
-    setFiles(await api.backups());
+  async function invalidateBackupData() {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['backups'] }),
+      queryClient.invalidateQueries({ queryKey: ['backupJobs'] })
+    ]);
   }
 
+  const backupMutation = useMutation({ mutationFn: () => api.backup('all'), onSuccess: invalidateBackupData });
+  const uploadMutation = useMutation({ mutationFn: ({ kind, file }: { kind: BackupKind; file: File }) => api.uploadBackup(kind, file), onSuccess: invalidateBackupData });
+  const updateMutation = useMutation({
+    mutationFn: ({ file, filename, note }: { file: BackupFile; filename: string; note: string | null }) => api.updateBackup(file.kind, file.filename, { filename, note }),
+    onSuccess: invalidateBackupData
+  });
+  const deleteMutation = useMutation({ mutationFn: (file: BackupFile) => api.deleteBackup(file.kind, file.filename), onSuccess: invalidateBackupData });
+  const restoreMutation = useMutation({ mutationFn: (file: BackupFile) => api.restore(file.kind, file.filename), onSuccess: invalidateBackupData });
+  const loading = backupMutation.isPending || uploadMutation.isPending || updateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending;
+
   async function runAction(action: () => Promise<unknown>, successMessage: string) {
-    setLoading(true);
     try {
       await action();
-      await refresh();
       onSuccess(successMessage);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Backup action failed');
-    } finally {
-      setLoading(false);
     }
   }
 
   useEffect(() => {
-    refresh().catch((error) => onError(error instanceof Error ? error.message : 'Unable to load backups'));
-  }, [onError]);
+    if (filesQuery.isError) {
+      onError(filesQuery.error instanceof Error ? filesQuery.error.message : 'Unable to load backups');
+    }
+  }, [filesQuery.error, filesQuery.isError, onError]);
 
   const filteredFiles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -58,9 +71,9 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
       <Stack gap="md">
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
-            <Button loading={loading} onClick={() => runAction(() => api.backup('all'), 'Backup completed')}>Backup now</Button>
+            <Button loading={backupMutation.isPending} onClick={() => runAction(() => backupMutation.mutateAsync(), 'Backup completed')}>Backup now</Button>
             <Button variant="light" onClick={() => setUploadOpened(true)}>Upload</Button>
-            <Button variant="default" onClick={() => refresh().catch((error) => onError(error instanceof Error ? error.message : 'Unable to refresh backups'))}>Refresh</Button>
+            <Button variant="default" loading={filesQuery.isFetching} onClick={() => queryClient.invalidateQueries({ queryKey: ['backups'] })}>Refresh</Button>
           </Group>
           <Group align="flex-end">
             <Select
@@ -124,7 +137,7 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
         onClose={() => setUploadOpened(false)}
         onUpload={(kind, file) =>
           runAction(async () => {
-            await api.uploadBackup(kind, file);
+            await uploadMutation.mutateAsync({ kind, file });
             setUploadOpened(false);
           }, 'Backup uploaded')
         }
@@ -137,7 +150,7 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
         onSave={(filename, note) =>
           editingFile &&
           runAction(async () => {
-            await api.updateBackup(editingFile.kind, editingFile.filename, { filename, note });
+            await updateMutation.mutateAsync({ file: editingFile, filename, note });
             setEditingFile(null);
           }, 'Backup updated')
         }
@@ -150,7 +163,7 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
         onConfirm={() =>
           deletingFile &&
           runAction(async () => {
-            await api.deleteBackup(deletingFile.kind, deletingFile.filename);
+            await deleteMutation.mutateAsync(deletingFile);
             setDeletingFile(null);
           }, 'Backup deleted')
         }
@@ -164,7 +177,7 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
         onConfirm={() =>
           restoringFile &&
           runAction(async () => {
-            await api.restore(restoringFile.kind, restoringFile.filename);
+            await restoreMutation.mutateAsync(restoringFile);
             setRestoringFile(null);
           }, 'Restore completed')
         }

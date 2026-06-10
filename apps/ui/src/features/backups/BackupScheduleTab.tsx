@@ -1,4 +1,5 @@
 import { Button, Checkbox, Group, NumberInput, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { api } from '../../api/client';
 import type { BackupKind, DatabaseBackupSchedule } from '../../api/types';
@@ -24,20 +25,35 @@ const fallbackSchedules: Record<BackupKind, DatabaseBackupSchedule> = {
 };
 
 export function BackupScheduleTab({ onSuccess, onError }: Props) {
-  const [schedules, setSchedules] = useState<Record<BackupKind, DatabaseBackupSchedule>>(fallbackSchedules);
+  const queryClient = useQueryClient();
+  const [drafts, setDrafts] = useState<Record<BackupKind, DatabaseBackupSchedule>>(fallbackSchedules);
   const [loadingKind, setLoadingKind] = useState<BackupKind | null>(null);
+  const schedulesQuery = useQuery({ queryKey: ['backupSchedules'], queryFn: api.schedules });
+  const saveMutation = useMutation({
+    mutationFn: ({ kind, schedule }: { kind: BackupKind; schedule: DatabaseBackupSchedule }) => api.saveSchedule(kind, schedule),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['backupSchedules'] })
+  });
+  const runNowMutation = useMutation({
+    mutationFn: (kind: BackupKind) => api.backup(kind),
+    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['backupJobs'] })
+  });
 
   useEffect(() => {
-    api.schedules()
-      .then((config) => setSchedules(config.schedules))
-      .catch((error) => onError(error instanceof Error ? error.message : 'Unable to load schedules'));
-  }, [onError]);
+    if (schedulesQuery.data) {
+      setDrafts(schedulesQuery.data.schedules);
+    }
+  }, [schedulesQuery.data]);
+
+  useEffect(() => {
+    if (schedulesQuery.isError) {
+      onError(schedulesQuery.error instanceof Error ? schedulesQuery.error.message : 'Unable to load schedules');
+    }
+  }, [onError, schedulesQuery.error, schedulesQuery.isError]);
 
   async function saveSchedule(kind: BackupKind) {
     setLoadingKind(kind);
     try {
-      const config = await api.saveSchedule(kind, schedules[kind]);
-      setSchedules(config.schedules);
+      await saveMutation.mutateAsync({ kind, schedule: drafts[kind] });
       onSuccess(`${kind.toUpperCase()} schedule saved`);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Unable to save schedule');
@@ -49,7 +65,7 @@ export function BackupScheduleTab({ onSuccess, onError }: Props) {
   async function runNow(kind: BackupKind) {
     setLoadingKind(kind);
     try {
-      await api.backup(kind);
+      await runNowMutation.mutateAsync(kind);
       onSuccess(`${kind.toUpperCase()} backup started`);
     } catch (error) {
       onError(error instanceof Error ? error.message : 'Unable to start backup');
@@ -64,9 +80,9 @@ export function BackupScheduleTab({ onSuccess, onError }: Props) {
         <SchedulePanel
           key={kind}
           kind={kind}
-          schedule={schedules[kind]}
+          schedule={drafts[kind]}
           loading={loadingKind === kind}
-          onChange={(schedule) => setSchedules((current) => ({ ...current, [kind]: schedule }))}
+          onChange={(schedule) => setDrafts((current) => ({ ...current, [kind]: schedule }))}
           onSave={() => saveSchedule(kind)}
           onRunNow={() => runNow(kind)}
         />

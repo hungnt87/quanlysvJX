@@ -1,35 +1,30 @@
 import { Badge, Button, Group, Table, Text } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { api } from '../../api/client';
-import type { BackupJob } from '../../api/types';
 
 type Props = {
   onError: (message: string) => void;
 };
 
 export function BackupJobsTab({ onError }: Props) {
-  const [jobs, setJobs] = useState<BackupJob[]>([]);
-
-  async function refresh() {
-    setJobs(await api.jobs());
-  }
-
-  useEffect(() => {
-    refresh().catch((error) => onError(error instanceof Error ? error.message : 'Unable to load jobs'));
-  }, [onError]);
+  const jobsQuery = useQuery({
+    queryKey: ['backupJobs'],
+    queryFn: api.jobs,
+    refetchInterval: (query) => (query.state.data?.some((job) => job.status === 'running') ? 5000 : false)
+  });
+  const jobs = jobsQuery.data ?? [];
 
   useEffect(() => {
-    if (!jobs.some((job) => job.status === 'running')) return undefined;
-    const interval = window.setInterval(() => {
-      refresh().catch((error) => onError(error instanceof Error ? error.message : 'Unable to refresh jobs'));
-    }, 5000);
-    return () => window.clearInterval(interval);
-  }, [jobs, onError]);
+    if (jobsQuery.isError) {
+      onError(jobsQuery.error instanceof Error ? jobsQuery.error.message : 'Unable to load jobs');
+    }
+  }, [jobsQuery.error, jobsQuery.isError, onError]);
 
   return (
     <>
       <Group justify="flex-end" mb="sm">
-        <Button variant="default" onClick={() => refresh().catch((error) => onError(error instanceof Error ? error.message : 'Unable to refresh jobs'))}>Refresh</Button>
+        <Button variant="default" loading={jobsQuery.isFetching} onClick={() => jobsQuery.refetch()}>Refresh</Button>
       </Group>
       <Table striped highlightOnHover withTableBorder>
         <Table.Thead>

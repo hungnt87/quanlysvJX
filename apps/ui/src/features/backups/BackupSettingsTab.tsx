@@ -1,20 +1,21 @@
 import { Alert, Stack, Table, Text } from '@mantine/core';
-import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { api } from '../../api/client';
-import type { BackupSettings } from '../../api/types';
 
 type Props = {
   onError: (message: string) => void;
 };
 
 export function BackupSettingsTab({ onError }: Props) {
-  const [settings, setSettings] = useState<BackupSettings | null>(null);
+  const settingsQuery = useQuery({ queryKey: ['backupSettings'], queryFn: api.backupSettings });
+  const settings = settingsQuery.data;
 
   useEffect(() => {
-    api.backupSettings()
-      .then(setSettings)
-      .catch((error) => onError(error instanceof Error ? error.message : 'Unable to load backup settings'));
-  }, [onError]);
+    if (settingsQuery.isError) {
+      onError(settingsQuery.error instanceof Error ? settingsQuery.error.message : 'Unable to load backup settings');
+    }
+  }, [onError, settingsQuery.error, settingsQuery.isError]);
 
   if (!settings) {
     return <Text c="dimmed">Loading backup settings...</Text>;
