@@ -12,3 +12,4 @@ apps/jx-services/mount/database/mssql/data/
 apps/jx-services/mount/database/mssql/seed/*.bak
 apps/jx-services/mount/database/mssql/seed/*.mdf
 apps/jx-services/mount/database/mssql/seed/*.ldf
+.codegraph/daemon.pid
