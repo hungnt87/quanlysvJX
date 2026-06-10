@@ -3,6 +3,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  cacheDir: '../../node_modules/.vite-ui',
   server: {
     host: '0.0.0.0',
     port: 5173,
