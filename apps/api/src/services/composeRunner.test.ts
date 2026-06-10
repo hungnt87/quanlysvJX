@@ -25,6 +25,8 @@ describe('buildComposeArgs', () => {
   it('builds argument arrays without shell interpolation', () => {
     expect(buildComposeArgs(['ps', '--format', 'json'])).toEqual([
       'compose',
+      '--env-file',
+      '.env',
       '-f',
       'apps/jx-services/docker-compose.yaml',
       'ps',

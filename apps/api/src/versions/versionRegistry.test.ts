@@ -83,9 +83,9 @@ describe('version registry', () => {
     const result = selectVersion(root, 'new_version');
 
     expect(result.activeVersion).toBe('new_version');
-    expect(result.serverPath).toBe('./apps/jx-services/versions/new_version/server/');
+    expect(result.serverPath).toBe(path.resolve(root, 'apps/jx-services/versions/new_version/server') + '/');
     expect(readVersionRegistry(root).activeVersion).toBe('new_version');
-    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=./apps/jx-services/versions/new_version/server/');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=' + path.resolve(root, 'apps/jx-services/versions/new_version/server') + '/');
   });
 
   it('renames an active version folder and keeps SERVER_PATH synchronized', () => {
@@ -102,6 +102,6 @@ describe('version registry', () => {
     });
     expect(statSync(path.join(getVersionsDir(root), 'mel_2026')).mtimeMs).toBeGreaterThanOrEqual(oldStat.mtimeMs);
     expect(readVersionRegistry(root).activeVersion).toBe('mel_2026');
-    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=./apps/jx-services/versions/mel_2026/server/');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=' + path.resolve(root, 'apps/jx-services/versions/mel_2026/server') + '/');
   });
 });

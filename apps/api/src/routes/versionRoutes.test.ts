@@ -64,7 +64,7 @@ describe('version routes', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().data).toMatchObject({ name: 'mel_2026', displayName: 'MEL 2026' });
-    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=./apps/jx-services/versions/mel_2026/server/');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=' + path.resolve(root, 'apps/jx-services/versions/mel_2026/server') + '/');
   });
 
   it('rejects renaming a version to an existing version name', async () => {
