@@ -146,7 +146,7 @@ export function selectVersion(projectRoot: string, name: string, subPath?: strin
   };
 
   writeVersionRegistry(projectRoot, nextRegistry);
-  const serverPath = toEnvServerPath(nextVersion.serverPath);
+  const serverPath = toEnvServerPath(nextVersion.serverPath, projectRoot);
   updateEnvKey(path.join(projectRoot, '.env'), 'SERVER_PATH', serverPath);
   return { activeVersion: versionName, serverPath };
 }
@@ -180,7 +180,7 @@ export function renameVersion(projectRoot: string, currentName: string, options:
   writeVersionRegistry(projectRoot, nextRegistry);
 
   if (registry.activeVersion === oldName) {
-    updateEnvKey(path.join(projectRoot, '.env'), 'SERVER_PATH', toEnvServerPath(renamed.serverPath));
+    updateEnvKey(path.join(projectRoot, '.env'), 'SERVER_PATH', toEnvServerPath(renamed.serverPath, projectRoot));
   }
 
   return renamed;
@@ -278,8 +278,8 @@ function toProjectRelativePath(projectRoot: string, absolutePath: string) {
   return path.relative(projectRoot, absolutePath).split(path.sep).join('/');
 }
 
-function toEnvServerPath(serverPath: string) {
-  return `./${serverPath.replace(/^\.\//, '').replace(/\/$/, '')}/`;
+function toEnvServerPath(serverPath: string, projectRoot: string) {
+  return path.resolve(projectRoot, serverPath) + '/';
 }
 
 function updateEnvKey(filePath: string, key: string, value: string) {

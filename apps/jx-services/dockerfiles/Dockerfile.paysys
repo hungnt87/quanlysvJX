@@ -36,7 +36,7 @@ RUN groupadd -g 1000 appgroup \
 WORKDIR /home/appuser
 
 COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
-COPY paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
+COPY mount/paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
 
 RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
     && chown appuser:appgroup /tmp/MDAC_TYP.EXE

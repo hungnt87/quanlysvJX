@@ -15,7 +15,7 @@ export type ComposeStream = EventEmitter & {
 };
 
 export function buildComposeArgs(args: readonly string[]) {
-  return ['compose', '-f', 'apps/jx-services/docker-compose.yaml', ...args];
+  return ['compose', '--env-file', '.env', '-f', 'apps/jx-services/docker-compose.yaml', ...args];
 }
 
 export async function runDockerCompose(
