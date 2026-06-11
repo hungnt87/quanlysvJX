@@ -10,6 +10,7 @@ services:
     mem_limit: 1g
     volumes:
       - ./mount/database/mysql_server1/data:/var/lib/mysql
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - jxnet
     restart: unless-stopped
@@ -55,6 +56,7 @@ services:
       MSSQL_ACCOUNT_DATABASE: account_tong
     volumes:
       - ./mount/database/mssql/seed:/var/opt/mssql/seed:ro
+      - /etc/localtime:/etc/localtime:ro
     networks:
       - jxnet
     depends_on:
@@ -80,6 +82,7 @@ services:
     volumes:
       - "./mount/paysyswin:/src/paysys"
       - "./mount/config/paysys/database.ini:/src/paysys/database.ini"
+      - /etc/localtime:/etc/localtime:ro
     network_mode: host
     depends_on:
       jxmysql:
@@ -108,6 +111,7 @@ services:
     volumes:
       - "./mount/paysyswin:/src/paysys"
       - "./mount/config/paysys/database.ini:/src/paysys/database.ini"
+      - /etc/localtime:/etc/localtime:ro
     network_mode: host
     depends_on:
       paysys:
@@ -137,6 +141,7 @@ services:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./mount/config/gateway/goddess.cfg:/src/jxser/gateway/goddess.cfg"
       - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
+      - /etc/localtime:/etc/localtime:ro
     entrypoint: [ "/bin/bash", "/src/entrypoint.sh" ]
     network_mode: host
     depends_on:
@@ -166,6 +171,7 @@ services:
       - "${SERVER_PATH}/gateway:/src/jxser/gateway/"
       - "./mount/config/gateway/bishop.cfg:/src/jxser/gateway/bishop.cfg"
       - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
+      - /etc/localtime:/etc/localtime:ro
     entrypoint: [ "/bin/bash", "/src/entrypoint.sh" ]
     network_mode: host
     depends_on:
@@ -203,6 +209,7 @@ services:
       - ./mount/logs/gateway/s3relay/Logs:/src/jxser/gateway/s3relay/Logs
       - ./mount/logs/gateway/s3relay/relay_logs:/src/jxser/gateway/s3relay/relay_logs
       - ./mount/logs/gateway/s3relay/RelayRunData:/src/jxser/gateway/s3relay/RelayRunData
+      - /etc/localtime:/etc/localtime:ro
     entrypoint: [ "/bin/bash", "/src/entrypoint.sh" ]
     network_mode: host
     depends_on:
@@ -233,6 +240,7 @@ services:
       - "./dockerfiles/entrypoint.sh:/src/entrypoint.sh"
       - ./mount/logs/server1/Logs:/src/jxser/server1/Logs
       - ./mount/logs/server1/itemexchange_setting/rolevalue_log:/src/jxser/server1/itemexchange_setting/rolevalue_log
+      - /etc/localtime:/etc/localtime:ro
     entrypoint: [ "/bin/bash", "/src/entrypoint.sh" ]
     network_mode: host
     depends_on:
