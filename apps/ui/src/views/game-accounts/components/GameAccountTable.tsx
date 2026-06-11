@@ -18,7 +18,7 @@ export function GameAccountTable({
   onExtend,
   onDelete,
   onBan,
-  onUnban
+  onUnban,
 }: Props) {
   return (
     <Table striped highlightOnHover withTableBorder>
@@ -38,19 +38,37 @@ export function GameAccountTable({
             <Table.Td>{account.expiresAt ?? '-'}</Table.Td>
             <Table.Td>{account.leftSeconds ?? 0}</Table.Td>
             <Table.Td>
-              <Badge color={account.status === 'banned' ? 'red' : 'green'}>{account.status === 'banned' ? 'Đã ban' : 'Hoạt động'}</Badge>
+              <Badge color={account.status === 'banned' ? 'red' : 'green'}>
+                {account.status === 'banned' ? 'Đã ban' : 'Hoạt động'}
+              </Badge>
             </Table.Td>
             <Table.Td>
               <Group gap="xs">
-                <Button size="xs" variant="light" onClick={() => onChangePassword(account)}>Đổi MK1</Button>
-                <Button size="xs" variant="light" onClick={() => onChangeSecondaryPassword(account)}>Đổi MK2</Button>
-                <Button size="xs" variant="light" onClick={() => onExtend(account)}>Gia hạn</Button>
+                <Button size="xs" variant="light" onClick={() => onChangePassword(account)}>
+                  Đổi MK1
+                </Button>
+                <Button
+                  size="xs"
+                  variant="light"
+                  onClick={() => onChangeSecondaryPassword(account)}
+                >
+                  Đổi MK2
+                </Button>
+                <Button size="xs" variant="light" onClick={() => onExtend(account)}>
+                  Gia hạn
+                </Button>
                 {account.status === 'banned' ? (
-                  <Button size="xs" color="green" variant="light" onClick={() => onUnban(account)}>Mở khóa</Button>
+                  <Button size="xs" color="green" variant="light" onClick={() => onUnban(account)}>
+                    Mở khóa
+                  </Button>
                 ) : (
-                  <Button size="xs" color="yellow" variant="light" onClick={() => onBan(account)}>Khóa</Button>
+                  <Button size="xs" color="yellow" variant="light" onClick={() => onBan(account)}>
+                    Khóa
+                  </Button>
                 )}
-                <Button size="xs" color="red" variant="light" onClick={() => onDelete(account)}>Xóa</Button>
+                <Button size="xs" color="red" variant="light" onClick={() => onDelete(account)}>
+                  Xóa
+                </Button>
               </Group>
             </Table.Td>
           </Table.Tr>

@@ -14,11 +14,19 @@ export function DeleteBackupModal({ opened, file, loading, onClose, onConfirm }:
 
   return (
     <Modal opened={opened} onClose={onClose} title="Delete backup" centered>
-      {blocked ? <Alert color="red" mb="md">Newest backup cannot be deleted</Alert> : null}
+      {blocked ? (
+        <Alert color="red" mb="md">
+          Newest backup cannot be deleted
+        </Alert>
+      ) : null}
       <Text mb="md">Delete backup file {file ? <strong>{file.filename}</strong> : null}?</Text>
       <Group justify="flex-end">
-        <Button variant="default" onClick={onClose}>Cancel</Button>
-        <Button color="red" disabled={!file || blocked} loading={loading} onClick={onConfirm}>Delete</Button>
+        <Button variant="default" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button color="red" disabled={!file || blocked} loading={loading} onClick={onConfirm}>
+          Delete
+        </Button>
       </Group>
     </Modal>
   );

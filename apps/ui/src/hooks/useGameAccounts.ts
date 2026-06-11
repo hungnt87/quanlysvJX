@@ -4,7 +4,8 @@ import type { CreateGameAccountPayload, UpdateGameAccountPayload } from '@/servi
 
 export const gameAccountKeys = {
   all: ['gameAccounts'] as const,
-  lists: (params: { search: string; page: number; pageSize: number }) => [...gameAccountKeys.all, 'list', params] as const,
+  lists: (params: { search: string; page: number; pageSize: number }) =>
+    [...gameAccountKeys.all, 'list', params] as const,
 };
 
 export const useGameAccounts = (params: { search: string; page: number; pageSize: number }) => {
@@ -16,15 +17,21 @@ export const useGameAccounts = (params: { search: string; page: number; pageSize
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: CreateGameAccountPayload) => gameAccountService.createGameAccount(payload),
+    mutationFn: (payload: CreateGameAccountPayload) =>
+      gameAccountService.createGameAccount(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: gameAccountKeys.all });
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ accountName, payload }: { accountName: string; payload: UpdateGameAccountPayload }) =>
-      gameAccountService.updateGameAccount(accountName, payload),
+    mutationFn: ({
+      accountName,
+      payload,
+    }: {
+      accountName: string;
+      payload: UpdateGameAccountPayload;
+    }) => gameAccountService.updateGameAccount(accountName, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: gameAccountKeys.all });
     },
@@ -54,6 +61,12 @@ export const useGameAccounts = (params: { search: string; page: number; pageSize
   return {
     accountsData: accountsQuery.data,
     isLoading: accountsQuery.isLoading,
+    isActionLoading:
+      createMutation.isPending ||
+      updateMutation.isPending ||
+      deleteMutation.isPending ||
+      banMutation.isPending ||
+      unbanMutation.isPending,
     createAccount: createMutation.mutateAsync,
     updateAccount: updateMutation.mutateAsync,
     deleteAccount: deleteMutation.mutateAsync,

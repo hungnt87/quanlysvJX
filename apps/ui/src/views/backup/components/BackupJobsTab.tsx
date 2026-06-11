@@ -1,8 +1,8 @@
 import { Badge, Button, Group, Table, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useCallback } from 'react';
-import { backupService } from '@/services/backupService';
+import { useEffect, useCallback, useRef } from 'react';
 import { backupKeys } from '@/hooks/useBackups';
+import { backupService } from '@/services/backupService';
 
 type Props = {
   onError: (message: string) => void;
@@ -12,7 +12,8 @@ export function BackupJobsTab({ onError }: Props) {
   const jobsQuery = useQuery({
     queryKey: backupKeys.jobs(),
     queryFn: backupService.getJobs,
-    refetchInterval: (query) => (query.state.data?.some((job) => job.status === 'running') ? 5000 : false)
+    refetchInterval: (query) =>
+      query.state.data?.some((job) => job.status === 'running') ? 5000 : false,
   });
   const jobs = jobsQuery.data ?? [];
 
@@ -23,7 +24,9 @@ export function BackupJobsTab({ onError }: Props) {
 
   useEffect(() => {
     if (jobsQuery.isError) {
-      onErrorRef.current(jobsQuery.error instanceof Error ? jobsQuery.error.message : 'Unable to load jobs');
+      onErrorRef.current(
+        jobsQuery.error instanceof Error ? jobsQuery.error.message : 'Unable to load jobs'
+      );
     }
   }, [jobsQuery.error, jobsQuery.isError]);
 
@@ -32,7 +35,9 @@ export function BackupJobsTab({ onError }: Props) {
   return (
     <>
       <Group justify="flex-end" mb="sm">
-        <Button variant="default" loading={jobsQuery.isFetching} onClick={handleRefresh}>Refresh</Button>
+        <Button variant="default" loading={jobsQuery.isFetching} onClick={handleRefresh}>
+          Refresh
+        </Button>
       </Group>
       <Table striped highlightOnHover withTableBorder>
         <Table.Thead>
@@ -48,14 +53,26 @@ export function BackupJobsTab({ onError }: Props) {
         </Table.Thead>
         <Table.Tbody>
           {jobs.length === 0 ? (
-            <Table.Tr><Table.Td colSpan={7}><Text c="dimmed">No backup jobs yet</Text></Table.Td></Table.Tr>
+            <Table.Tr>
+              <Table.Td colSpan={7}>
+                <Text c="dimmed">No backup jobs yet</Text>
+              </Table.Td>
+            </Table.Tr>
           ) : (
             jobs.map((job) => (
               <Table.Tr key={job.id}>
                 <Table.Td>{job.kind}</Table.Td>
                 <Table.Td>{job.database ?? '-'}</Table.Td>
                 <Table.Td>{job.trigger}</Table.Td>
-                <Table.Td><Badge color={job.status === 'failed' ? 'red' : job.status === 'running' ? 'blue' : 'green'}>{job.status}</Badge></Table.Td>
+                <Table.Td>
+                  <Badge
+                    color={
+                      job.status === 'failed' ? 'red' : job.status === 'running' ? 'blue' : 'green'
+                    }
+                  >
+                    {job.status}
+                  </Badge>
+                </Table.Td>
                 <Table.Td>{formatDate(job.startedAt)}</Table.Td>
                 <Table.Td>{job.finishedAt ? formatDate(job.finishedAt) : '-'}</Table.Td>
                 <Table.Td>{job.error ?? '-'}</Table.Td>
@@ -67,8 +84,6 @@ export function BackupJobsTab({ onError }: Props) {
     </>
   );
 }
-
-import { useRef } from 'react';
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();

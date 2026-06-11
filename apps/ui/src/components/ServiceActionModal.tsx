@@ -12,7 +12,15 @@ type Props = {
   onComplete?: () => void;
 };
 
-export function ServiceActionModal({ opened, service, action, loading, onClose, onConfirm, onComplete }: Props) {
+export function ServiceActionModal({
+  opened,
+  service,
+  action,
+  loading,
+  onClose,
+  onConfirm,
+  onComplete,
+}: Props) {
   const [logs, setLogs] = useState('');
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
@@ -27,15 +35,17 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
       return undefined;
     }
 
-    const initialMsg = action === 'start' 
-      ? `[Hệ thống] Đang chạy lệnh khởi dựng container cho dịch vụ ${service}...\n`
-      : `[Hệ thống] Đang dừng/khởi động lại dịch vụ ${service}...\n`;
+    const initialMsg =
+      action === 'start'
+        ? `[Hệ thống] Đang chạy lệnh khởi dựng container cho dịch vụ ${service}...\n`
+        : `[Hệ thống] Đang dừng/khởi động lại dịch vụ ${service}...\n`;
 
     setLogs(initialMsg);
-    
-    const source = action === 'start' 
-      ? new EventSource(serviceService.startStreamUrl(service))
-      : new EventSource(serviceService.logStreamUrl(service, 100));
+
+    const source =
+      action === 'start'
+        ? new EventSource(serviceService.startStreamUrl(service))
+        : new EventSource(serviceService.logStreamUrl(service, 100));
 
     const appendLog = (event: MessageEvent<string>) => {
       let chunk = event.data;
@@ -62,7 +72,7 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
     source.addEventListener('log', appendLog);
     source.addEventListener('close', handleClose);
     source.addEventListener('error', handleError);
-    
+
     source.onerror = () => {
       if (action === 'start' && onCompleteRef.current) {
         onCompleteRef.current();
@@ -82,7 +92,10 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
 
   const cleanLogs = (str: string) => {
     // eslint-disable-next-line no-control-regex
-    const stripped = str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+    const stripped = str.replace(
+      /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+      ''
+    );
     const lines = stripped.split('\n');
     const processedLines = lines.map((line) => {
       const parts = line.split('\r');
@@ -94,15 +107,26 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
   const verb = action === 'start' ? 'Khởi động' : action === 'stop' ? 'Dừng' : 'Khởi động lại';
 
   return (
-    <Modal opened={opened} onClose={loading ? () => void 0 : onClose} title="Xác nhận hành động dịch vụ" centered size={loading ? 'lg' : 'md'}>
+    <Modal
+      opened={opened}
+      onClose={loading ? () => void 0 : onClose}
+      title="Xác nhận hành động dịch vụ"
+      centered
+      size={loading ? 'lg' : 'md'}
+    >
       {!loading ? (
         <>
           <Text mb="md">
-            Bạn có chắc chắn muốn thực hiện hành động <strong>{verb.toLowerCase()}</strong> dịch vụ <strong>{service}</strong>?
+            Bạn có chắc chắn muốn thực hiện hành động <strong>{verb.toLowerCase()}</strong> dịch vụ{' '}
+            <strong>{service}</strong>?
           </Text>
           <Group justify="flex-end">
-            <Button variant="default" onClick={onClose}>Hủy</Button>
-            <Button color="blue" onClick={onConfirm}>Xác nhận</Button>
+            <Button variant="default" onClick={onClose}>
+              Hủy
+            </Button>
+            <Button color="blue" onClick={onConfirm}>
+              Xác nhận
+            </Button>
           </Group>
         </>
       ) : (
@@ -130,7 +154,7 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
                   lineHeight: '1.4',
                   whiteSpace: 'pre-wrap',
                   wordBreak: 'break-all',
-                  color: '#4af626'
+                  color: '#4af626',
                 }}
               >
                 {cleanLogs(logs) || 'Đang kết nối tới container terminal logs...'}

@@ -6,16 +6,16 @@ export default defineConfig({
   cacheDir: '../../node_modules/.vite-ui',
   resolve: {
     alias: {
-      '@': new URL('./src', import.meta.url).pathname
+      '@': new URL('./src', import.meta.url).pathname,
     },
-    dedupe: ['@mantine/core', '@mantine/form', '@mantine/hooks', '@mantine/notifications']
+    dedupe: ['@mantine/core', '@mantine/form', '@mantine/hooks', '@mantine/notifications'],
   },
   optimizeDeps: {
-    include: ['@mantine/form']
+    include: ['@mantine/form'],
   },
   server: {
     host: '0.0.0.0',
     port: 5173,
-    proxy: { '/api': 'http://127.0.0.1:3001' }
-  }
+    proxy: { '/api': 'http://127.0.0.1:3001' },
+  },
 });

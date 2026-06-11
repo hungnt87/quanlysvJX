@@ -1,7 +1,7 @@
-import { createBrowserRouter, Navigate } from 'react-router-dom';
-import DashboardLayout from './DashboardLayout';
-import { routes } from '@/configs/routes.config';
 import React from 'react';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
+import { routes } from '@/configs/routes.config';
+import DashboardLayout from './DashboardLayout';
 
 export const router = createBrowserRouter([
   {

@@ -28,7 +28,7 @@ describe('RestoreModal', () => {
     expect(restoreButton.disabled).toBe(true);
 
     fireEvent.change(screen.getByPlaceholderText('Backup filename'), {
-      target: { value: 'mysql-20260609-030405.sql.gz' }
+      target: { value: 'mysql-20260609-030405.sql.gz' },
     });
     fireEvent.click(restoreButton);
 

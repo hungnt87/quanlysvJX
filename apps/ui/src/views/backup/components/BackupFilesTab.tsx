@@ -1,8 +1,8 @@
 import { Badge, Button, Group, Select, Stack, Table, Text, TextInput } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useCallback } from 'react';
-import type { BackupFile, BackupKind } from '@/services/types';
 import { useBackups, backupKeys } from '@/hooks/useBackups';
+import type { BackupFile, BackupKind } from '@/services/types';
 import { BackupEditModal } from './BackupEditModal';
 import { BackupUploadModal } from './BackupUploadModal';
 import { DeleteBackupModal } from './DeleteBackupModal';
@@ -31,7 +31,7 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
     updateBackup,
     deleteBackup,
     restoreBackup,
-    isLoading
+    isLoading,
   } = useBackups();
 
   const handleBackupNow = useCallback(() => {
@@ -40,27 +40,41 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
       .catch((error) => onError(error instanceof Error ? error.message : 'Backup action failed'));
   }, [createBackup, onSuccess, onError]);
 
-  const handleUpload = useCallback((kind: BackupKind, file: File) => {
-    uploadBackup({ kind, file })
-      .then(() => {
-        onSuccess('Backup uploaded');
-        setUploadOpened(false);
-      })
-      .catch((error) => onError(error instanceof Error ? error.message : 'Upload failed'));
-  }, [uploadBackup, onSuccess, onError]);
+  const handleUpload = useCallback(
+    (kind: BackupKind, file: File) => {
+      uploadBackup({ kind, file })
+        .then(() => {
+          onSuccess('Backup uploaded');
+          setUploadOpened(false);
+        })
+        .catch((error) => onError(error instanceof Error ? error.message : 'Upload failed'));
+    },
+    [uploadBackup, onSuccess, onError]
+  );
 
-  const handleSaveEdit = useCallback((filename: string, note: string | null) => {
-    if (!editingFile) return;
-    updateBackup({ kind: editingFile.kind, currentFilename: editingFile.filename, payload: { filename, note } })
-      .then(() => {
-        onSuccess('Backup updated');
-        setEditingFile(null);
+  const handleSaveEdit = useCallback(
+    (filename: string, note: string | null) => {
+      if (!editingFile) {
+        return;
+      }
+      updateBackup({
+        kind: editingFile.kind,
+        currentFilename: editingFile.filename,
+        payload: { filename, note },
       })
-      .catch((error) => onError(error instanceof Error ? error.message : 'Update failed'));
-  }, [editingFile, updateBackup, onSuccess, onError]);
+        .then(() => {
+          onSuccess('Backup updated');
+          setEditingFile(null);
+        })
+        .catch((error) => onError(error instanceof Error ? error.message : 'Update failed'));
+    },
+    [editingFile, updateBackup, onSuccess, onError]
+  );
 
   const handleDeleteConfirm = useCallback(() => {
-    if (!deletingFile) return;
+    if (!deletingFile) {
+      return;
+    }
     deleteBackup({ kind: deletingFile.kind, filename: deletingFile.filename })
       .then(() => {
         onSuccess('Backup deleted');
@@ -70,7 +84,9 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
   }, [deletingFile, deleteBackup, onSuccess, onError]);
 
   const handleRestoreConfirm = useCallback(() => {
-    if (!restoringFile) return;
+    if (!restoringFile) {
+      return;
+    }
     restoreBackup({ kind: restoringFile.kind, filename: restoringFile.filename })
       .then(() => {
         onSuccess('Restore completed');
@@ -87,7 +103,12 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
     const normalizedQuery = query.trim().toLowerCase();
     return files
       .filter((file) => filterKind === 'all' || file.kind === filterKind)
-      .filter((file) => !normalizedQuery || file.filename.toLowerCase().includes(normalizedQuery) || (file.note ?? '').toLowerCase().includes(normalizedQuery))
+      .filter(
+        (file) =>
+          !normalizedQuery ||
+          file.filename.toLowerCase().includes(normalizedQuery) ||
+          (file.note ?? '').toLowerCase().includes(normalizedQuery)
+      )
       .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt));
   }, [files, filterKind, query]);
 
@@ -97,17 +118,30 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
             <Button onClick={handleBackupNow}>Backup now</Button>
-            <Button variant="light" onClick={() => setUploadOpened(true)}>Upload</Button>
-            <Button variant="default" onClick={handleRefresh}>Refresh</Button>
+            <Button variant="light" onClick={() => setUploadOpened(true)}>
+              Upload
+            </Button>
+            <Button variant="default" onClick={handleRefresh}>
+              Refresh
+            </Button>
           </Group>
           <Group align="flex-end">
             <Select
               label="Database"
-              data={[{ value: 'all', label: 'All' }, { value: 'mysql', label: 'MySQL' }, { value: 'mssql', label: 'MSSQL' }]}
+              data={[
+                { value: 'all', label: 'All' },
+                { value: 'mysql', label: 'MySQL' },
+                { value: 'mssql', label: 'MSSQL' },
+              ]}
               value={filterKind}
               onChange={(value) => setFilterKind((value ?? 'all') as FilterKind)}
             />
-            <TextInput label="Search" value={query} onChange={(event) => setQuery(event.currentTarget.value)} placeholder="Filename or note" />
+            <TextInput
+              label="Search"
+              value={query}
+              onChange={(event) => setQuery(event.currentTarget.value)}
+              placeholder="Filename or note"
+            />
           </Group>
         </Group>
 
@@ -126,7 +160,9 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
           <Table.Tbody>
             {filteredFiles.length === 0 ? (
               <Table.Tr>
-                <Table.Td colSpan={7}><Text c="dimmed">No backup files found</Text></Table.Td>
+                <Table.Td colSpan={7}>
+                  <Text c="dimmed">No backup files found</Text>
+                </Table.Td>
               </Table.Tr>
             ) : (
               filteredFiles.map((file) => (
@@ -148,10 +184,30 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
                   <Table.Td>{file.source}</Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <Button size="xs" variant="light" onClick={() => setRestoringFile(file)}>Restore</Button>
-                      <Button size="xs" variant="default" onClick={() => setEditingFile(file)}>Edit</Button>
-                      <Button size="xs" variant="light" component="a" href={`/api/backups/${file.kind}/${encodeURIComponent(file.filename)}/download`} download>Download</Button>
-                      <Button size="xs" color="red" variant="light" disabled={file.isLatest} onClick={() => setDeletingFile(file)}>Delete</Button>
+                      <Button size="xs" variant="light" onClick={() => setRestoringFile(file)}>
+                        Restore
+                      </Button>
+                      <Button size="xs" variant="default" onClick={() => setEditingFile(file)}>
+                        Edit
+                      </Button>
+                      <Button
+                        size="xs"
+                        variant="light"
+                        component="a"
+                        href={`/api/backups/${file.kind}/${encodeURIComponent(file.filename)}/download`}
+                        download
+                      >
+                        Download
+                      </Button>
+                      <Button
+                        size="xs"
+                        color="red"
+                        variant="light"
+                        disabled={file.isLatest}
+                        onClick={() => setDeletingFile(file)}
+                      >
+                        Delete
+                      </Button>
                     </Group>
                   </Table.Td>
                 </Table.Tr>
@@ -194,8 +250,12 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
 }
 
 function formatBytes(size: number) {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 

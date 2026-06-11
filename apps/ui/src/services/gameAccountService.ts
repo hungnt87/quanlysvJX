@@ -1,9 +1,18 @@
 import ApiService from './base/apiService';
-import type { GameAccountListResponse, GameAccount, CreateGameAccountPayload, UpdateGameAccountPayload } from './types';
+import type {
+  GameAccountListResponse,
+  GameAccount,
+  CreateGameAccountPayload,
+  UpdateGameAccountPayload,
+} from './types';
 
 export const gameAccountService = {
   getGameAccounts: async (params: { search: string; page: number; pageSize: number }) => {
-    const query = new URLSearchParams({ search: params.search, page: String(params.page), pageSize: String(params.pageSize) });
+    const query = new URLSearchParams({
+      search: params.search,
+      page: String(params.page),
+      pageSize: String(params.pageSize),
+    });
     const res = await ApiService.fetchData<any, GameAccountListResponse>({
       url: `/api/game-accounts?${query.toString()}`,
       method: 'GET',

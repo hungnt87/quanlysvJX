@@ -1,5 +1,3 @@
-import { useState, useCallback, useTransition, useRef, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
   Button,
@@ -12,10 +10,12 @@ import {
   Table,
   Text,
   TextInput,
-  Title
+  Title,
 } from '@mantine/core';
-import type { GameVersion } from '@/services/types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useTransition, useRef, useEffect } from 'react';
 import { useVersions, versionKeys } from '@/hooks/useVersions';
+import type { GameVersion } from '@/services/types';
 import { versionService } from '@/services/versionService';
 import { BrowseFolderModal } from './BrowseFolderModal';
 
@@ -41,13 +41,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
   const [browsingVersion, setBrowsingVersion] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  const {
-    versionsData,
-    selectVersion,
-    deleteVersion,
-    renameVersion,
-    isLoading
-  } = useVersions();
+  const { versionsData, selectVersion, deleteVersion, renameVersion, isLoading } = useVersions();
 
   const onSuccessRef = useRef(onSuccess);
   const onErrorRef = useRef(onError);
@@ -71,7 +65,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
       setCloneModalOpened(false);
       queryClient.invalidateQueries({ queryKey: versionKeys.all });
     },
-    onError: (error) => onErrorRef.current(error instanceof Error ? error.message : 'Git clone thất bại')
+    onError: (error) =>
+      onErrorRef.current(error instanceof Error ? error.message : 'Git clone thất bại'),
   });
 
   const uploadMutation = useMutation({
@@ -86,7 +81,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
           if (progress >= 100) {
             setUploadStatus('extracting');
           }
-        }
+        },
       });
     },
     onSuccess: async () => {
@@ -101,28 +96,44 @@ export function VersionManager({ onSuccess, onError }: Props) {
     onError: (error) => {
       setUploadStatus('idle');
       onErrorRef.current(error instanceof Error ? error.message : 'Upload hoặc giải nén thất bại');
-    }
+    },
   });
 
-  const handleActivateVersion = useCallback((name: string) => {
-    selectVersion({ name })
-      .then((res) => {
-        onSuccessRef.current(`Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`);
-        setBrowsingVersion(null);
-      })
-      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'));
-  }, [selectVersion]);
-
-  const handleSelectSubPath = useCallback((subPath: string) => {
-    if (browsingVersion) {
-      selectVersion({ name: browsingVersion, subPath })
+  const handleActivateVersion = useCallback(
+    (name: string) => {
+      selectVersion({ name })
         .then((res) => {
           onSuccessRef.current(`Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`);
           setBrowsingVersion(null);
         })
-        .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'));
-    }
-  }, [browsingVersion, selectVersion]);
+        .catch((error) =>
+          onErrorRef.current(
+            error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'
+          )
+        );
+    },
+    [selectVersion]
+  );
+
+  const handleSelectSubPath = useCallback(
+    (subPath: string) => {
+      if (browsingVersion) {
+        selectVersion({ name: browsingVersion, subPath })
+          .then((res) => {
+            onSuccessRef.current(
+              `Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`
+            );
+            setBrowsingVersion(null);
+          })
+          .catch((error) =>
+            onErrorRef.current(
+              error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'
+            )
+          );
+      }
+    },
+    [browsingVersion, selectVersion]
+  );
 
   const handleGitClone = useCallback(() => {
     if (!gitUrl) {
@@ -136,7 +147,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
     cloneMutation.mutate({
       name: customName,
       url: gitUrl,
-      branch: gitBranch
+      branch: gitBranch,
     });
   }, [gitUrl, customName, gitBranch, cloneMutation]);
 
@@ -163,20 +174,32 @@ export function VersionManager({ onSuccess, onError }: Props) {
   }, []);
 
   const handleRename = useCallback(() => {
-    if (!renamingVersion) return;
-    renameVersion({ currentName: renamingVersion.name, payload: { name: renameName.trim(), displayName: renameDisplayName.trim() } })
+    if (!renamingVersion) {
+      return;
+    }
+    renameVersion({
+      currentName: renamingVersion.name,
+      payload: { name: renameName.trim(), displayName: renameDisplayName.trim() },
+    })
       .then(() => {
         onSuccessRef.current('Đã đổi tên phiên bản game thành công');
         setRenamingVersion(null);
       })
-      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Đổi tên phiên bản thất bại'));
+      .catch((error) =>
+        onErrorRef.current(error instanceof Error ? error.message : 'Đổi tên phiên bản thất bại')
+      );
   }, [renamingVersion, renameName, renameDisplayName, renameVersion]);
 
-  const handleDeleteVersion = useCallback((name: string) => {
-    deleteVersion(name)
-      .then(() => onSuccessRef.current('Đã xóa phiên bản game thành công'))
-      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Xóa phiên bản thất bại'));
-  }, [deleteVersion]);
+  const handleDeleteVersion = useCallback(
+    (name: string) => {
+      deleteVersion(name)
+        .then(() => onSuccessRef.current('Đã xóa phiên bản game thành công'))
+        .catch((error) =>
+          onErrorRef.current(error instanceof Error ? error.message : 'Xóa phiên bản thất bại')
+        );
+    },
+    [deleteVersion]
+  );
 
   const handleBrowseFolder = useCallback((name: string) => {
     startTransition(() => {
@@ -192,7 +215,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
         <div>
           <Title order={4}>Quản lý các Phiên bản Game</Title>
           <Text size="xs" color="dimmed">
-            Tải lên hoặc clone GitHub các phiên bản game để thay đổi nhanh thư mục chạy game (SERVER_PATH) trong .env.
+            Tải lên hoặc clone GitHub các phiên bản game để thay đổi nhanh thư mục chạy game
+            (SERVER_PATH) trong .env.
           </Text>
         </div>
 
@@ -219,7 +243,9 @@ export function VersionManager({ onSuccess, onError }: Props) {
             {versions.length === 0 ? (
               <Table.Tr>
                 <Table.Td colSpan={5} align="center">
-                  <Text size="sm" color="dimmed">Chưa có phiên bản game nào tải lên.</Text>
+                  <Text size="sm" color="dimmed">
+                    Chưa có phiên bản game nào tải lên.
+                  </Text>
                 </Table.Td>
               </Table.Tr>
             ) : (
@@ -227,10 +253,14 @@ export function VersionManager({ onSuccess, onError }: Props) {
                 <Table.Tr key={ver.name}>
                   <Table.Td>
                     <Text fw={600}>{ver.displayName || ver.name}</Text>
-                    <Text size="xs" color="dimmed">{ver.name}</Text>
+                    <Text size="xs" color="dimmed">
+                      {ver.name}
+                    </Text>
                   </Table.Td>
                   <Table.Td>
-                    <Text style={{ fontFamily: 'monospace' }} size="xs">{ver.path ?? `./${ver.serverPath}/`}</Text>
+                    <Text style={{ fontFamily: 'monospace' }} size="xs">
+                      {ver.path ?? `./${ver.serverPath}/`}
+                    </Text>
                   </Table.Td>
                   <Table.Td>
                     <Text size="xs">{formatUploadedAt(ver.uploadedAt)}</Text>
@@ -343,7 +373,11 @@ export function VersionManager({ onSuccess, onError }: Props) {
           />
           <Group gap="sm">
             <FileButton onChange={setUploadFile} accept=".zip,.tar.gz,.tgz">
-              {(props) => <Button {...props} variant="light">Chọn file</Button>}
+              {(props) => (
+                <Button {...props} variant="light">
+                  Chọn file
+                </Button>
+              )}
             </FileButton>
             <Text size="sm" color={uploadFile ? undefined : 'dimmed'}>
               {uploadFile ? uploadFile.name : 'Chưa chọn file'}
@@ -353,15 +387,25 @@ export function VersionManager({ onSuccess, onError }: Props) {
             <Stack gap={4}>
               <Progress value={uploadProgress} />
               <Text size="xs" color="dimmed">
-                {uploadStatus === 'extracting' ? 'Đang giải nén...' : `Đang tải lên ${uploadProgress}%`}
+                {uploadStatus === 'extracting'
+                  ? 'Đang giải nén...'
+                  : `Đang tải lên ${uploadProgress}%`}
               </Text>
             </Stack>
           )}
           <Group justify="flex-end">
-            <Button variant="default" disabled={uploadMutation.isPending} onClick={() => setUploadModalOpened(false)}>
+            <Button
+              variant="default"
+              disabled={uploadMutation.isPending}
+              onClick={() => setUploadModalOpened(false)}
+            >
               Hủy
             </Button>
-            <Button onClick={handleUpload} loading={uploadMutation.isPending} disabled={uploadDisabled}>
+            <Button
+              onClick={handleUpload}
+              loading={uploadMutation.isPending}
+              disabled={uploadDisabled}
+            >
               Upload
             </Button>
           </Group>
@@ -391,7 +435,11 @@ export function VersionManager({ onSuccess, onError }: Props) {
             <Button variant="default" onClick={() => setRenamingVersion(null)}>
               Hủy
             </Button>
-            <Button onClick={handleRename} loading={loading} disabled={!renameName.trim() || !renameDisplayName.trim()}>
+            <Button
+              onClick={handleRename}
+              loading={loading}
+              disabled={!renameName.trim() || !renameDisplayName.trim()}
+            >
               Lưu
             </Button>
           </Group>
@@ -411,6 +459,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
 
 function formatUploadedAt(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
+  if (Number.isNaN(date.getTime())) {
+    return '-';
+  }
   return date.toLocaleString('vi-VN', { hour12: false });
 }

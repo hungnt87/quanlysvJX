@@ -1,9 +1,9 @@
 import { Paper, Tabs } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useState, useCallback } from 'react';
+import { BackupSettingsTab } from './components/BackupSettingsTab';
 import { EnvEditor } from './components/EnvEditor';
 import { VersionManager } from './components/VersionManager';
-import { BackupSettingsTab } from './components/BackupSettingsTab';
 
 export default function SettingsView() {
   const [activeTab, setActiveTab] = useState<string | null>('env');

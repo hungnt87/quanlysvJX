@@ -16,7 +16,8 @@ export const useVersions = () => {
   });
 
   const selectMutation = useMutation({
-    mutationFn: (payload: { name: string; subPath?: string }) => versionService.selectVersion(payload),
+    mutationFn: (payload: { name: string; subPath?: string }) =>
+      versionService.selectVersion(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: versionKeys.all });
     },
@@ -30,8 +31,13 @@ export const useVersions = () => {
   });
 
   const renameMutation = useMutation({
-    mutationFn: ({ currentName, payload }: { currentName: string; payload: { name?: string; displayName?: string } }) =>
-      versionService.renameVersion(currentName, payload),
+    mutationFn: ({
+      currentName,
+      payload,
+    }: {
+      currentName: string;
+      payload: { name?: string; displayName?: string };
+    }) => versionService.renameVersion(currentName, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: versionKeys.all });
     },

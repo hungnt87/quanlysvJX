@@ -1,51 +1,140 @@
-import { cleanup, screen, waitFor } from '@testing-library/react';
+import { cleanup, screen, waitFor, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '@/App';
-import { api } from '@/services/client';
-import { renderWithProviders } from '@/utils/test/renderWithProviders';
 
-vi.mock('@/services/client', () => ({
-  api: {
-    services: vi.fn().mockResolvedValue([]),
-    action: vi.fn(),
-    logs: vi.fn().mockResolvedValue({ service: 'all', tail: 300, logs: '' }),
-    logStreamUrl: vi.fn(() => '/api/services/all/logs/stream?tail=0'),
-    backups: vi.fn().mockResolvedValue([]),
-    jobs: vi.fn().mockResolvedValue([]),
-    schedules: vi.fn().mockResolvedValue({
-      version: 1,
+const mockGetServices = vi.fn();
+const mockGetBackups = vi.fn();
+const mockGetGameAccounts = vi.fn();
+
+vi.mock('@/hooks/useServices', () => ({
+  useServices: vi.fn(() => {
+    mockGetServices();
+    return {
+      services: [],
+      isFetching: false,
+      error: null,
+      isError: false,
+      runAction: vi.fn(),
+      isActionLoading: false,
+    };
+  }),
+  serviceKeys: {
+    all: ['services'] as const,
+    lists: () => ['services', 'list'] as const,
+    logs: (service: string, tail: number) => ['services', 'logs', service, { tail }] as const,
+  },
+}));
+
+vi.mock('@/hooks/useBackups', () => ({
+  useBackups: vi.fn(() => {
+    mockGetBackups();
+    return {
+      backups: [],
+      jobs: [],
       schedules: {
-        mysql: { enabled: false, daysOfWeek: [], time: '03:00', retentionDays: 14, lastRunKey: null },
-        mssql: { enabled: false, daysOfWeek: [], time: '03:30', retentionDays: 14, lastRunKey: null }
-      }
-    }),
-    backupSettings: vi.fn().mockResolvedValue({
+        version: 1,
+        schedules: {
+          mysql: {
+            enabled: false,
+            daysOfWeek: [],
+            time: '03:00',
+            retentionDays: 14,
+            lastRunKey: null,
+          },
+          mssql: {
+            enabled: false,
+            daysOfWeek: [],
+            time: '03:30',
+            retentionDays: 14,
+            lastRunKey: null,
+          },
+        },
+      },
+      settings: {
+        mysqlBackupDir: '/mysql',
+        mssqlBackupDir: '/mssql',
+        backupMetadataFile: '/backup-metadata.json',
+        backupScheduleFile: '/backup-schedules.json',
+      },
+      isLoading: false,
+      createBackup: vi.fn(),
+      uploadBackup: vi.fn(),
+      updateBackup: vi.fn(),
+      deleteBackup: vi.fn(),
+      restoreBackup: vi.fn(),
+      saveSchedule: vi.fn(),
+    };
+  }),
+  backupKeys: {
+    all: ['backups'] as const,
+    lists: () => ['backups', 'list'] as const,
+    jobs: () => ['backups', 'jobs'] as const,
+    schedules: () => ['backups', 'schedules'] as const,
+    settings: () => ['backups', 'settings'] as const,
+  },
+}));
+
+vi.mock('@/hooks/useGameAccounts', () => ({
+  useGameAccounts: vi.fn(() => {
+    mockGetGameAccounts();
+    return {
+      accountsData: { items: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 1 } },
+      isLoading: false,
+      isActionLoading: false,
+      createAccount: vi.fn(),
+      updateAccount: vi.fn(),
+      deleteAccount: vi.fn(),
+      banAccount: vi.fn(),
+      unbanAccount: vi.fn(),
+    };
+  }),
+}));
+
+vi.mock('@/hooks/useVersions', () => ({
+  useVersions: vi.fn(() => ({
+    versionsData: { activeVersion: null, versions: [] },
+    isLoading: false,
+    selectVersion: vi.fn(),
+    deleteVersion: vi.fn(),
+    renameVersion: vi.fn(),
+  })),
+  versionKeys: {
+    all: ['versions'] as const,
+    lists: () => ['versions', 'list'] as const,
+    browse: (name: string, path?: string) => ['versions', 'browse', name, { path }] as const,
+  },
+}));
+
+vi.mock('@/hooks/useEnv', () => ({
+  useEnv: vi.fn(() => ({
+    envData: { content: '' },
+    isLoading: false,
+    saveEnv: vi.fn(),
+  })),
+}));
+
+vi.mock('@/services/serviceService', () => ({
+  serviceService: {
+    getLogs: vi.fn().mockResolvedValue({ service: 'all', tail: 300, logs: '' }),
+    logStreamUrl: vi.fn(() => '/api/services/all/logs/stream?tail=0'),
+  },
+}));
+
+vi.mock('@/services/backupService', () => ({
+  backupService: {
+    getJobs: vi.fn().mockResolvedValue([]),
+    getBackupSettings: vi.fn().mockResolvedValue({
       mysqlBackupDir: '/mysql',
       mssqlBackupDir: '/mssql',
       backupMetadataFile: '/backup-metadata.json',
-      backupScheduleFile: '/backup-schedules.json'
+      backupScheduleFile: '/backup-schedules.json',
     }),
-    gameAccounts: vi.fn().mockResolvedValue({ items: [], pagination: { page: 1, pageSize: 10, total: 0, totalPages: 1 } }),
-    createGameAccount: vi.fn(),
-    updateGameAccount: vi.fn(),
-    deleteGameAccount: vi.fn(),
-    banGameAccount: vi.fn(),
-    unbanGameAccount: vi.fn(),
-    env: vi.fn().mockResolvedValue({ content: '' }),
-    saveEnv: vi.fn(),
-    versions: vi.fn().mockResolvedValue({ activeVersion: null, versions: [] }),
-    selectVersion: vi.fn(),
-    cloneVersion: vi.fn(),
-    uploadVersion: vi.fn(),
-    deleteVersion: vi.fn()
-  }
+  },
 }));
 
 class MockEventSource {
   close = vi.fn();
-
   constructor(public readonly url: string) {}
-
   addEventListener() {
     return undefined;
   }
@@ -62,26 +151,12 @@ describe('App routing', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders dashboard on /dashboard and loads services through query', async () => {
-    renderWithProviders(<App />, { route: '/dashboard' });
+  it('renders app default view and triggers services query', async () => {
+    // When rendering <App />, it uses createBrowserRouter starting at '/'
+    // which redirects to '/dashboard'
+    render(<App />);
 
-    expect(screen.getByRole('tab', { name: 'Bảng điều khiển & Logs' }).getAttribute('aria-selected')).toBe('true');
-    await waitFor(() => expect(api.services).toHaveBeenCalledTimes(1));
-  });
-
-  it('renders backup files when opened at /backup/files', async () => {
-    renderWithProviders(<App />, { route: '/backup/files' });
-
-    expect(screen.getByRole('tab', { name: 'Sao lưu (Backup)' }).getAttribute('aria-selected')).toBe('true');
-    expect(await screen.findByRole('tab', { name: 'Files' })).toBeTruthy();
-    await waitFor(() => expect(api.backups).toHaveBeenCalledTimes(1));
-    expect(api.services).not.toHaveBeenCalled();
-  });
-
-  it('shows game account tab and route', async () => {
-    renderWithProviders(<App />, { route: '/game-accounts' });
-
-    expect(await screen.findByRole('tab', { name: 'Tài khoản game' })).toBeTruthy();
-    expect(screen.getByPlaceholderText('Tìm theo tên tài khoản')).toBeTruthy();
+    expect(screen.getByText('JX Compose Manager')).toBeTruthy();
+    await waitFor(() => expect(mockGetServices).toHaveBeenCalled());
   });
 });

@@ -1,8 +1,7 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
 import { Button, Card, Group, Stack, Text, Textarea, Title } from '@mantine/core';
-import { useEnv } from '@/hooks/useEnv';
 import { useQueryClient } from '@tanstack/react-query';
-import { versionKeys } from '@/hooks/useVersions';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEnv } from '@/hooks/useEnv';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -32,9 +31,11 @@ export function EnvEditor({ onSuccess, onError }: Props) {
     saveEnv(content)
       .then(() => {
         onSuccessRef.current('Lưu cấu hình file .env thành công');
-        queryClient.invalidateQueries({ queryKey: versionKeys.all });
+        queryClient.invalidateQueries({ queryKey: ['versions'] });
       })
-      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Lưu file cấu hình thất bại'));
+      .catch((error) =>
+        onErrorRef.current(error instanceof Error ? error.message : 'Lưu file cấu hình thất bại')
+      );
   }, [content, saveEnv, queryClient]);
 
   return (
@@ -43,7 +44,8 @@ export function EnvEditor({ onSuccess, onError }: Props) {
         <div>
           <Title order={4}>Cấu hình biến môi trường (.env)</Title>
           <Text size="xs" color="dimmed">
-            Chỉnh sửa trực tiếp file .env cấu hình hệ thống máy chủ JX. Nhớ kiểm tra kỹ các thông số trước khi lưu.
+            Chỉnh sửa trực tiếp file .env cấu hình hệ thống máy chủ JX. Nhớ kiểm tra kỹ các thông số
+            trước khi lưu.
           </Text>
         </div>
 
@@ -55,11 +57,7 @@ export function EnvEditor({ onSuccess, onError }: Props) {
         />
 
         <Group justify="flex-end">
-          <Button
-            color="blue"
-            loading={isLoading}
-            onClick={handleSave}
-          >
+          <Button color="blue" loading={isLoading} onClick={handleSave}>
             Lưu thay đổi
           </Button>
         </Group>

@@ -15,12 +15,13 @@ export function ChangePasswordModal({ opened, account, loading, onClose, onSubmi
   const form = useForm({
     initialValues: {
       password: '',
-      confirmPassword: ''
+      confirmPassword: '',
     },
     validate: {
       password: (val) => (val.length < 1 ? 'Mật khẩu không được để trống' : null),
-      confirmPassword: (val, values) => (val !== values.password ? 'Mật khẩu xác nhận không khớp' : null)
-    }
+      confirmPassword: (val, values) =>
+        val !== values.password ? 'Mật khẩu xác nhận không khớp' : null,
+    },
   });
 
   useEffect(() => {
@@ -34,10 +35,18 @@ export function ChangePasswordModal({ opened, account, loading, onClose, onSubmi
       <form onSubmit={form.onSubmit((values) => onSubmit(values.password))}>
         <Stack>
           <PasswordInput label="Mật khẩu mới" required {...form.getInputProps('password')} />
-          <PasswordInput label="Xác nhận mật khẩu mới" required {...form.getInputProps('confirmPassword')} />
+          <PasswordInput
+            label="Xác nhận mật khẩu mới"
+            required
+            {...form.getInputProps('confirmPassword')}
+          />
           <Group justify="flex-end">
-            <Button variant="default" onClick={onClose}>Hủy</Button>
-            <Button type="submit" loading={loading}>Lưu thay đổi</Button>
+            <Button variant="default" onClick={onClose}>
+              Hủy
+            </Button>
+            <Button type="submit" loading={loading}>
+              Lưu thay đổi
+            </Button>
           </Group>
         </Stack>
       </form>

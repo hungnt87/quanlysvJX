@@ -24,15 +24,28 @@ export function BackupUploadModal({ opened, loading, onClose, onUpload }: Props)
     <Modal opened={opened} onClose={onClose} title="Upload backup" centered>
       <Select
         label="Database"
-        data={[{ value: 'mysql', label: 'MySQL' }, { value: 'mssql', label: 'MSSQL' }]}
+        data={[
+          { value: 'mysql', label: 'MySQL' },
+          { value: 'mssql', label: 'MSSQL' },
+        ]}
         value={kind}
         onChange={(value) => setKind((value ?? 'mysql') as BackupKind)}
         mb="md"
       />
-      <FileInput label="Backup file" value={file} onChange={setFile} placeholder="Choose backup file" mb="md" />
+      <FileInput
+        label="Backup file"
+        value={file}
+        onChange={setFile}
+        placeholder="Choose backup file"
+        mb="md"
+      />
       <Group justify="flex-end">
-        <Button variant="default" onClick={onClose}>Cancel</Button>
-        <Button disabled={!file} loading={loading} onClick={() => file && onUpload(kind, file)}>Upload</Button>
+        <Button variant="default" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button disabled={!file} loading={loading} onClick={() => file && onUpload(kind, file)}>
+          Upload
+        </Button>
       </Group>
     </Modal>
   );

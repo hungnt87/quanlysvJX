@@ -41,33 +41,44 @@ export const useBackups = () => {
   });
 
   const uploadBackupMutation = useMutation({
-    mutationFn: ({ kind, file }: { kind: BackupKind; file: File }) => backupService.uploadBackup(kind, file),
+    mutationFn: ({ kind, file }: { kind: BackupKind; file: File }) =>
+      backupService.uploadBackup(kind, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.all });
     },
   });
 
   const updateBackupMutation = useMutation({
-    mutationFn: ({ kind, currentFilename, payload }: { kind: BackupKind; currentFilename: string; payload: { filename: string; note: string | null } }) =>
-      backupService.updateBackup(kind, currentFilename, payload),
+    mutationFn: ({
+      kind,
+      currentFilename,
+      payload,
+    }: {
+      kind: BackupKind;
+      currentFilename: string;
+      payload: { filename: string; note: string | null };
+    }) => backupService.updateBackup(kind, currentFilename, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.all });
     },
   });
 
   const deleteBackupMutation = useMutation({
-    mutationFn: ({ kind, filename }: { kind: BackupKind; filename: string }) => backupService.deleteBackup(kind, filename),
+    mutationFn: ({ kind, filename }: { kind: BackupKind; filename: string }) =>
+      backupService.deleteBackup(kind, filename),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.all });
     },
   });
 
   const restoreBackupMutation = useMutation({
-    mutationFn: ({ kind, filename }: { kind: BackupKind; filename: string }) => backupService.restoreBackup(kind, filename),
+    mutationFn: ({ kind, filename }: { kind: BackupKind; filename: string }) =>
+      backupService.restoreBackup(kind, filename),
   });
 
   const saveScheduleMutation = useMutation({
-    mutationFn: ({ kind, schedule }: { kind: BackupKind; schedule: DatabaseBackupSchedule }) => backupService.saveSchedule(kind, schedule),
+    mutationFn: ({ kind, schedule }: { kind: BackupKind; schedule: DatabaseBackupSchedule }) =>
+      backupService.saveSchedule(kind, schedule),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.schedules() });
     },

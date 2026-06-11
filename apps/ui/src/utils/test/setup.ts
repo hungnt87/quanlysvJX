@@ -8,8 +8,8 @@ Object.defineProperty(window, 'matchMedia', {
     removeListener: () => undefined,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
-    dispatchEvent: () => false
-  })
+    dispatchEvent: () => false,
+  }),
 });
 
 class TestResizeObserver {
@@ -28,12 +28,12 @@ class TestResizeObserver {
 
 Object.defineProperty(window, 'ResizeObserver', {
   writable: true,
-  value: TestResizeObserver
+  value: TestResizeObserver,
 });
 
 Object.defineProperty(globalThis, 'ResizeObserver', {
   writable: true,
-  value: TestResizeObserver
+  value: TestResizeObserver,
 });
 
 Object.defineProperty(window, 'visualViewport', {
@@ -48,16 +48,16 @@ Object.defineProperty(window, 'visualViewport', {
     pageTop: 0,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
-    dispatchEvent: () => false
-  }
+    dispatchEvent: () => false,
+  },
 });
 
 Object.defineProperty(document, 'fonts', {
   writable: true,
   value: {
     addEventListener: () => undefined,
-    removeEventListener: () => undefined
-  }
+    removeEventListener: () => undefined,
+  },
 });
 
 Element.prototype.scrollIntoView = () => undefined;

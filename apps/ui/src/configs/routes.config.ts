@@ -1,5 +1,5 @@
-import { lazy } from 'react';
 import { IconGauge, IconUser, IconCloudDownload, IconSettings } from '@tabler/icons-react';
+import { lazy } from 'react';
 
 export interface NavigationTree {
   key: string;

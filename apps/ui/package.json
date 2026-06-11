@@ -10,7 +10,7 @@
     "vitest": "vitest run --passWithNoTests",
     "lint": "npm run oxlint && npm run stylelint",
     "oxlint": "oxlint .",
-    "stylelint": "stylelint \"**/*.css\" --cache",
+    "stylelint": "stylelint \"src/**/*.css\" --cache",
     "format:test": "oxfmt --check \"**/*.{ts,tsx,css}\"",
     "format:write": "oxfmt --write \"**/*.{ts,tsx,css}\"",
     "test": "npm run typecheck && npm run format:test && npm run lint && npm run vitest && npm run build"

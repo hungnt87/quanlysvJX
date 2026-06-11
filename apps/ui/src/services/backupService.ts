@@ -1,5 +1,13 @@
 import ApiService from './base/apiService';
-import type { BackupList, BackupFile, BackupJob, BackupScheduleConfig, DatabaseBackupSchedule, BackupSettings, BackupKind } from './types';
+import type {
+  BackupList,
+  BackupFile,
+  BackupJob,
+  BackupScheduleConfig,
+  DatabaseBackupSchedule,
+  BackupSettings,
+  BackupKind,
+} from './types';
 
 export const backupService = {
   getBackups: async () => {
@@ -26,7 +34,11 @@ export const backupService = {
     });
     return res.data;
   },
-  updateBackup: async (kind: BackupKind, currentFilename: string, payload: { filename: string; note: string | null }) => {
+  updateBackup: async (
+    kind: BackupKind,
+    currentFilename: string,
+    payload: { filename: string; note: string | null }
+  ) => {
     const res = await ApiService.fetchData<any, BackupFile>({
       url: `/api/backups/${kind}/${encodeURIComponent(currentFilename)}`,
       method: 'PATCH',

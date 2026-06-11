@@ -1,8 +1,19 @@
-import { Button, Group, NumberInput, Paper, Select, Stack, Switch, Text, Box, ScrollArea } from '@mantine/core';
+import {
+  Button,
+  Group,
+  NumberInput,
+  Paper,
+  Select,
+  Stack,
+  Switch,
+  Text,
+  Box,
+  ScrollArea,
+} from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { serviceService } from '@/services/serviceService';
 import { serviceKeys } from '@/hooks/useServices';
+import { serviceService } from '@/services/serviceService';
 
 type Props = {
   services: string[];
@@ -14,14 +25,14 @@ type Props = {
 const MAX_LOG_LINES = 5000;
 
 const SERVICE_COLORS: Record<string, string> = {
-  goddess: '#e040fb',       // Tím
-  bishop: '#448aff',        // Xanh dương
-  s3relay: '#ff5252',       // Đỏ cam
-  jxserver: '#ffd700',      // Vàng
-  paysys: '#18ffff',        // Xanh ngọc
+  goddess: '#e040fb', // Tím
+  bishop: '#448aff', // Xanh dương
+  s3relay: '#ff5252', // Đỏ cam
+  jxserver: '#ffd700', // Vàng
+  paysys: '#18ffff', // Xanh ngọc
   s3relayserver: '#ff4081', // Hồng
-  jxmysql: '#69f0ae',       // Xanh lá sáng
-  jxmssql: '#ffab40',       // Vàng cam
+  jxmysql: '#69f0ae', // Xanh lá sáng
+  jxmssql: '#ffab40', // Vàng cam
 };
 
 export function LogsPanel({ services, selected, onSelect, onError }: Props) {
@@ -39,7 +50,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   const logsQuery = useQuery({
     queryKey: serviceKeys.logs(activeService, tail),
     queryFn: () => serviceService.getLogs(activeService, tail),
-    retry: false
+    retry: false,
   });
 
   const onErrorRef = useRef(onError);
@@ -53,7 +64,9 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
   useEffect(() => {
     if (logsQuery.isError) {
-      onErrorRef.current(logsQuery.error instanceof Error ? logsQuery.error.message : 'Unable to load logs');
+      onErrorRef.current(
+        logsQuery.error instanceof Error ? logsQuery.error.message : 'Unable to load logs'
+      );
       setStreamReady(true);
       return;
     }
@@ -66,7 +79,9 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   }, [logsQuery.data, logsQuery.error, logsQuery.isError]);
 
   useEffect(() => {
-    if (!autoFollow || !streamReady) return undefined;
+    if (!autoFollow || !streamReady) {
+      return undefined;
+    }
 
     const source = new EventSource(serviceService.logStreamUrl(activeService, 0));
     const appendLog = (event: MessageEvent<string>) => {
@@ -86,8 +101,10 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   }, [activeService]);
 
   useEffect(() => {
-    if (!autoFollow || !shouldFollowRef.current) return;
-    
+    if (!autoFollow || !shouldFollowRef.current) {
+      return;
+    }
+
     const scrollToBottomFn = () => {
       const viewport = viewportRef.current;
       if (viewport) {
@@ -115,32 +132,31 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
   const handleScroll = useCallback(() => {
     const viewport = viewportRef.current;
-    if (!viewport) return;
+    if (!viewport) {
+      return;
+    }
 
     const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
     setShowScrollBottomBtn(distanceFromBottom > 150);
     shouldFollowRef.current = distanceFromBottom < 24;
   }, []);
 
-  const cleanLogs = useCallback((str: string) => {
-    // eslint-disable-next-line no-control-regex
-    const stripped = str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
-    const lines = stripped.split('\n');
-    const processedLines = lines.map((line) => {
-      const parts = line.split('\r');
-      return parts[parts.length - 1];
-    });
-    return processedLines.join('\n');
-  }, []);
-
-  const stripAnsi = useCallback((str: string) => 
-    // eslint-disable-next-line no-control-regex
-    str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, ''), []);
+  const stripAnsi = useCallback(
+    (str: string) =>
+      // eslint-disable-next-line no-control-regex
+      str.replace(
+        /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
+        ''
+      ),
+    []
+  );
 
   const formatTimestamp = useCallback((tsStr: string) => {
     try {
       const date = new Date(tsStr);
-      if (isNaN(date.getTime())) return `[${tsStr.substring(11, 19)}]`;
+      if (isNaN(date.getTime())) {
+        return `[${tsStr.substring(11, 19)}]`;
+      }
       const pad = (n: number) => String(n).padStart(2, '0');
       return `[${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}]`;
     } catch {
@@ -151,23 +167,25 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   const logLines = useMemo(() => {
     const lines = logs.replace(/\r/g, '').split('\n');
     return lines.map((line, index) => {
-      if (!line.trim() && index === lines.length - 1) return null;
-      
+      if (!line.trim() && index === lines.length - 1) {
+        return null;
+      }
+
       const cleanLine = stripAnsi(line);
       const match = cleanLine.match(/^([a-zA-Z0-9_-]+)\s*\|\s*(.*)$/);
-      
+
       let serviceName = '';
       let logContent = cleanLine;
-      
+
       if (match && match[1] && match[2]) {
         serviceName = match[1].trim();
         logContent = match[2];
       }
-      
+
       const tsMatch = logContent.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\s*(.*)$/);
       let ts: string | null = null;
       let actualContent = logContent;
-      
+
       if (tsMatch && tsMatch[1] && tsMatch[2] !== undefined) {
         ts = tsMatch[1];
         actualContent = tsMatch[2] ?? '';
@@ -175,13 +193,13 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
       let color = '#4af626';
       if (activeService !== 'all') {
-        const matchedService = Object.keys(SERVICE_COLORS).find(
-          (s) => activeService.toLowerCase().includes(s)
+        const matchedService = Object.keys(SERVICE_COLORS).find((s) =>
+          activeService.toLowerCase().includes(s)
         );
         color = matchedService ? SERVICE_COLORS[matchedService]! : '#4af626';
       } else if (serviceName) {
-        const matchedService = Object.keys(SERVICE_COLORS).find(
-          (s) => serviceName.toLowerCase().includes(s)
+        const matchedService = Object.keys(SERVICE_COLORS).find((s) =>
+          serviceName.toLowerCase().includes(s)
         );
         color = matchedService ? SERVICE_COLORS[matchedService]! : '#4af626';
       }
@@ -191,23 +209,27 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
           {showTimestamps && ts && (
             <span style={{ opacity: 0.5, marginRight: '8px' }}>{formatTimestamp(ts)}</span>
           )}
-          {serviceName && (
-            <span style={{ fontWeight: 'bold' }}>{serviceName} | </span>
-          )}
+          {serviceName && <span style={{ fontWeight: 'bold' }}>{serviceName} | </span>}
           {actualContent}
         </div>
       );
     });
   }, [logs, activeService, showTimestamps, formatTimestamp, stripAnsi]);
 
-  const selectData = useMemo(() => [
-    { value: 'all', label: 'Tất cả các dịch vụ' },
-    ...services.map((name) => ({ value: name, label: name })),
-  ], [services]);
+  const selectData = useMemo(
+    () => [
+      { value: 'all', label: 'Tất cả các dịch vụ' },
+      ...services.map((name) => ({ value: name, label: name })),
+    ],
+    [services]
+  );
 
-  const handleSelectChange = useCallback((value: string | null) => {
-    onSelect(value === 'all' ? 'all' : value);
-  }, [onSelect]);
+  const handleSelectChange = useCallback(
+    (value: string | null) => {
+      onSelect(value === 'all' ? 'all' : value);
+    },
+    [onSelect]
+  );
 
   const handleTailChange = useCallback((value: string | number) => {
     setTail(typeof value === 'number' ? value : Number(value) || 300);
@@ -245,22 +267,22 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
             value={activeService}
             onChange={handleSelectChange}
           />
-          <NumberInput
-            label="Tail"
-            min={50}
-            max={2000}
-            value={tail}
-            onChange={handleTailChange}
-          />
+          <NumberInput label="Tail" min={50} max={2000} value={tail} onChange={handleTailChange} />
         </Group>
         <Group justify="space-between">
           <Group gap="xs">
-            <Button variant="default" onClick={handleClear}>Clear</Button>
-            <Button variant="light" onClick={handleSelectAll}>Tất cả</Button>
+            <Button variant="default" onClick={handleClear}>
+              Clear
+            </Button>
+            <Button variant="light" onClick={handleSelectAll}>
+              Tất cả
+            </Button>
           </Group>
-          <Button loading={logsQuery.isFetching} onClick={handleRefresh}>Refresh logs</Button>
+          <Button loading={logsQuery.isFetching} onClick={handleRefresh}>
+            Refresh logs
+          </Button>
         </Group>
-        
+
         <Box style={{ position: 'relative' }}>
           <ScrollArea
             viewportRef={viewportRef}

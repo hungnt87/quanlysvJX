@@ -1,174 +1,28 @@
-import { AppShell, Button, Grid, Group, MantineProvider, Stack, Tabs, Text, Title } from '@mantine/core';
-import { Notifications, notifications } from '@mantine/notifications';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useState } from 'react';
-import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { api } from '@/services/client';
-import type { ServiceStatus } from '@/services/types';
-import { BackupPanel } from '@/features/backup';
-import { GameAccountPanel } from '@/features/gameAccounts';
-import { LogsPanel } from '@/features/logs';
-import { ServiceActionModal, ServiceTable } from '@/features/services';
-import { VersionManager } from '@/features/dashboard/VersionManager';
-import { EnvEditor } from '@/features/dashboard/EnvEditor';
 import '@mantine/core/styles.css';
 import '@mantine/notifications/styles.css';
-import '@/assets/styles/styles.css';
+import { MantineProvider } from '@mantine/core';
+import { Notifications } from '@mantine/notifications';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { RouterProvider } from 'react-router-dom';
+import router from '@/components/layout/DefaultLayout';
 
-type PendingAction = { service: string; action: 'start' | 'stop' | 'restart' } | null;
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: false,
+      staleTime: 30000,
+    },
+  },
+});
 
 export function App() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [selectedService, setSelectedService] = useState<string | null>('all');
-  const [pendingAction, setPendingAction] = useState<PendingAction>(null);
-  const [loadingAction, setLoadingAction] = useState(false);
-  const activeRootTab = location.pathname.startsWith('/backup')
-    ? 'backup'
-    : location.pathname.startsWith('/game-accounts')
-      ? 'game-accounts'
-      : 'dashboard';
-  const servicesQuery = useQuery({
-    queryKey: ['services'],
-    queryFn: api.services,
-    enabled: activeRootTab === 'dashboard',
-    refetchInterval: activeRootTab === 'dashboard' ? 5000 : false
-  });
-  const services = servicesQuery.data ?? [];
-
-  const showError = useCallback((message: string) => {
-    notifications.show({ color: 'red', title: 'Operation failed', message });
-  }, []);
-
-  const showSuccess = useCallback((message: string) => {
-    notifications.show({ color: 'green', title: 'Done', message });
-  }, []);
-
-  const serviceActionMutation = useMutation({
-    mutationFn: ({ service, action }: { service: string; action: 'start' | 'stop' | 'restart' }) => api.action(service, action),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['services'] });
-    },
-    onSettled: () => {
-      setLoadingAction(false);
-      setPendingAction(null);
-    }
-  });
-
-  async function runAction(service: string, action: 'start' | 'stop' | 'restart') {
-    setPendingAction({ service, action });
-  }
-
-  function submitAction(service: string, action: 'start' | 'stop' | 'restart') {
-    setLoadingAction(true);
-    if (action !== 'start') {
-      serviceActionMutation.mutate({ service, action });
-    }
-  }
-
-  useEffect(() => {
-    if (servicesQuery.isError) {
-      showError(servicesQuery.error instanceof Error ? servicesQuery.error.message : 'Unable to load services');
-    }
-  }, [servicesQuery.error, servicesQuery.isError, showError]);
-
   return (
-    <MantineProvider defaultColorScheme="auto">
-      <Notifications />
-      <AppShell header={{ height: 56 }} padding="md">
-        <AppShell.Header px="md">
-          <Group h="100%" justify="space-between">
-            <div>
-              <Title order={3}>JX Compose Manager</Title>
-              <Text size="xs" c="dimmed">docker-compose.yaml</Text>
-            </div>
-            <Button variant="light" loading={servicesQuery.isFetching} onClick={() => queryClient.invalidateQueries({ queryKey: ['services'] })}>Refresh</Button>
-          </Group>
-        </AppShell.Header>
-        <AppShell.Main>
-          <Tabs value={activeRootTab} onChange={(value) => navigate(value === 'backup' ? '/backup/files' : value === 'game-accounts' ? '/game-accounts' : '/dashboard')}>
-            <Tabs.List mb="md">
-              <Tabs.Tab value="dashboard">Bảng điều khiển &amp; Logs</Tabs.Tab>
-              <Tabs.Tab value="backup">Sao lưu (Backup)</Tabs.Tab>
-              <Tabs.Tab value="game-accounts">Tài khoản game</Tabs.Tab>
-            </Tabs.List>
-          </Tabs>
-          <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route
-              path="/dashboard"
-              element={
-                <DashboardView
-                  services={services}
-                  selectedService={selectedService}
-                  setSelectedService={setSelectedService}
-                  runAction={runAction}
-                  showError={showError}
-                  showSuccess={showSuccess}
-                />
-              }
-            />
-            <Route path="/backup" element={<Navigate to="/backup/files" replace />} />
-            <Route
-              path="/backup/*"
-              element={
-              <BackupPanel onSuccess={showSuccess} onError={showError} />
-              }
-            />
-            <Route
-              path="/game-accounts"
-              element={<GameAccountPanel onSuccess={showSuccess} onError={showError} />}
-            />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
-        </AppShell.Main>
-      </AppShell>
-      <ServiceActionModal
-        opened={pendingAction !== null}
-        service={pendingAction?.service ?? null}
-        action={pendingAction?.action ?? null}
-        loading={loadingAction}
-        onClose={() => setPendingAction(null)}
-        onConfirm={() => pendingAction && submitAction(pendingAction.service, pendingAction.action)}
-        onComplete={async () => {
-          setLoadingAction(false);
-          setPendingAction(null);
-          await queryClient.invalidateQueries({ queryKey: ['services'] });
-        }}
-      />
-    </MantineProvider>
-  );
-}
-
-type DashboardViewProps = {
-  services: ServiceStatus[];
-  selectedService: string | null;
-  setSelectedService: (service: string | null) => void;
-  runAction: (service: string, action: 'start' | 'stop' | 'restart') => void;
-  showError: (message: string) => void;
-  showSuccess: (message: string) => void;
-};
-
-function DashboardView({ services, selectedService, setSelectedService, runAction, showError, showSuccess }: DashboardViewProps) {
-  return (
-    <Stack gap="md">
-      <Grid align="stretch">
-        <Grid.Col span={{ base: 12, md: 3 }}>
-          <ServiceTable services={services} selected={selectedService} onSelect={setSelectedService} onAction={runAction} />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 9 }}>
-          <LogsPanel services={services.map((service) => service.name)} selected={selectedService} onSelect={setSelectedService} onError={showError} />
-        </Grid.Col>
-      </Grid>
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <VersionManager onSuccess={showSuccess} onError={showError} />
-        </Grid.Col>
-        <Grid.Col span={{ base: 12, md: 6 }}>
-          <EnvEditor onSuccess={showSuccess} onError={showError} />
-        </Grid.Col>
-      </Grid>
-    </Stack>
+    <QueryClientProvider client={queryClient}>
+      <MantineProvider defaultColorScheme="auto">
+        <Notifications />
+        <RouterProvider router={router} />
+      </MantineProvider>
+    </QueryClientProvider>
   );
 }

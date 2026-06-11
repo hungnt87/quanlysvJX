@@ -23,4 +23,7 @@ export const serviceService = {
     });
     return res.data;
   },
+  startStreamUrl: (service: string) => `/api/services/${service}/start/stream`,
+  logStreamUrl: (service: string, tail: number) =>
+    `/api/services/${service}/logs/stream?tail=${tail}`,
 };
