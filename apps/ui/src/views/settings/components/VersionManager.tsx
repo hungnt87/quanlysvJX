@@ -296,317 +296,317 @@ export function VersionManager({ onSuccess, onError }: Props) {
     <Stack gap="md">
       <GameNetworkConfigPanel onSuccess={onSuccess} onError={onError} />
       <Card withBorder padding="md" radius="md">
-      <Stack gap="md">
-        <div>
-          <Title order={4}>Quản lý các Phiên bản Game</Title>
-          <Text size="xs" color="dimmed">
-            Tải lên hoặc clone GitHub các phiên bản game để thay đổi nhanh thư mục chạy game
-            (SERVER_PATH) trong .env.
-          </Text>
-        </div>
-
-        <Group gap="md">
-          <Button loading={uploadMutation.isPending} onClick={() => setUploadModalOpened(true)}>
-            Tải lên file game
-          </Button>
-          <Button variant="light" onClick={() => setCloneModalOpened(true)}>
-            Tải về từ GitHub
-          </Button>
-        </Group>
-
-        <Table striped highlightOnHover withTableBorder>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Tên phiên bản</Table.Th>
-              <Table.Th>Đường dẫn (.env)</Table.Th>
-              <Table.Th>Thời gian tải lên</Table.Th>
-              <Table.Th>Trạng thái</Table.Th>
-              <Table.Th>Thao tác</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {versions.length === 0 ? (
-              <Table.Tr>
-                <Table.Td colSpan={5} align="center">
-                  <Text size="sm" color="dimmed">
-                    Chưa có phiên bản game nào tải lên.
-                  </Text>
-                </Table.Td>
-              </Table.Tr>
-            ) : (
-              versions.map((ver) => (
-                <Table.Tr key={ver.name}>
-                  <Table.Td>
-                    <Text fw={600}>{ver.name}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text style={{ fontFamily: 'monospace' }} size="xs">
-                      {ver.path}
-                    </Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="xs">{formatUploadedAt(ver.uploadedAt)}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    {ver.isActive ? (
-                      <Badge color="green">Đang chạy</Badge>
-                    ) : (
-                      <Badge color="gray">Sẵn sàng</Badge>
-                    )}
-                  </Table.Td>
-                  <Table.Td>
-                    <Group gap="xs">
-                      <Button
-                        size="xs"
-                        variant="filled"
-                        color="green"
-                        disabled={ver.isActive || loading}
-                        onClick={() => handleActivateVersion(ver.name)}
-                      >
-                        Sử dụng bản này
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="outline"
-                        color="blue"
-                        disabled={loading}
-                        onClick={() => handleBrowseFolder(ver.name)}
-                      >
-                        Duyệt thư mục
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        disabled={loading}
-                        onClick={() => openRenameModal(ver)}
-                      >
-                        Đổi tên
-                      </Button>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        color="red"
-                        disabled={loading}
-                        onClick={() => handleDeleteVersion(ver)}
-                      >
-                        Xóa
-                      </Button>
-                    </Group>
-                  </Table.Td>
-                </Table.Tr>
-              ))
-            )}
-          </Table.Tbody>
-        </Table>
-      </Stack>
-
-      <Modal
-        opened={cloneModalOpened}
-        onClose={() => {
-          cloneForm.reset();
-          setCloneModalOpened(false);
-        }}
-        title="Tải về trực tiếp từ GitHub"
-        size="md"
-      >
-        <form noValidate onSubmit={cloneForm.onSubmit(handleGitClone, focusFirstError)}>
-          <Stack gap="md">
-            <TextInput
-              id="url"
-              placeholder="https://github.com/user/repo"
-              label="GitHub URL"
-              required
-              {...cloneForm.getInputProps('url')}
-              key={cloneForm.key('url')}
-            />
-            <TextInput
-              id="branch"
-              placeholder="main"
-              label="Nhánh (Branch)"
-              required
-              {...cloneForm.getInputProps('branch')}
-              key={cloneForm.key('branch')}
-            />
-            <TextInput
-              id="clone-name"
-              placeholder="v1"
-              label="Tên thư mục lưu trữ"
-              required
-              {...cloneForm.getInputProps('name')}
-              key={cloneForm.key('name')}
-            />
-            <Group justify="flex-end">
-              <Button
-                variant="default"
-                onClick={() => {
-                  cloneForm.reset();
-                  setCloneModalOpened(false);
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" loading={cloneMutation.isPending}>
-                Bắt đầu tải (Clone)
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
-
-      <Modal
-        opened={uploadModalOpened}
-        onClose={() => {
-          if (!uploadMutation.isPending) {
-            uploadForm.reset();
-            setUploadModalOpened(false);
-          }
-        }}
-        title="Tải lên phiên bản game"
-        size="md"
-      >
-        <form noValidate onSubmit={uploadForm.onSubmit(handleUpload, focusFirstError)}>
-          <Stack gap="md">
-            <TextInput
-              id="upload-name"
-              label="Tên phiên bản"
-              required
-              placeholder="mel2026"
-              {...uploadForm.getInputProps('name')}
-              key={uploadForm.key('name')}
-            />
-            <Stack gap="xs">
-              <Group gap="sm">
-                <FileButton
-                  onChange={(file) => uploadForm.setFieldValue('file', file)}
-                  accept=".zip,.tar.gz,.tgz"
-                >
-                  {(props) => (
-                    <Button {...props} variant="light">
-                      Chọn file
-                    </Button>
-                  )}
-                </FileButton>
-                <Text size="sm" color={uploadForm.values.file ? undefined : 'dimmed'}>
-                  {uploadForm.values.file
-                    ? (uploadForm.values.file as File).name
-                    : 'Chưa chọn file'}
-                </Text>
-              </Group>
-              {uploadForm.errors.file && (
-                <Text size="xs" color="red">
-                  {uploadForm.errors.file}
-                </Text>
-              )}
-            </Stack>
-
-            {(uploadMutation.isPending || uploadProgress > 0) && (
-              <Stack gap={4}>
-                <Progress value={uploadProgress} />
-                <Text size="xs" color="dimmed">
-                  {uploadStatus === 'extracting'
-                    ? 'Đang giải nén...'
-                    : `Đang tải lên ${uploadProgress}%`}
-                </Text>
-              </Stack>
-            )}
-            <Group justify="flex-end">
-              <Button
-                variant="default"
-                disabled={uploadMutation.isPending}
-                onClick={() => {
-                  uploadForm.reset();
-                  setUploadModalOpened(false);
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" loading={uploadMutation.isPending}>
-                Upload
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
-
-      <Modal
-        opened={!!renamingVersion}
-        onClose={() => {
-          renameForm.reset();
-          setRenamingVersion(null);
-        }}
-        title="Đổi tên phiên bản"
-        size="md"
-      >
-        <form noValidate onSubmit={renameForm.onSubmit(handleRename, focusFirstError)}>
-          <Stack gap="md">
-            <TextInput
-              id="rename-name"
-              label="Tên phiên bản mới"
-              required
-              {...renameForm.getInputProps('name')}
-              key={renameForm.key('name')}
-            />
-            <Group justify="flex-end">
-              <Button
-                variant="default"
-                onClick={() => {
-                  renameForm.reset();
-                  setRenamingVersion(null);
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="submit" loading={loading}>
-                Lưu
-              </Button>
-            </Group>
-          </Stack>
-        </form>
-      </Modal>
-
-      <Modal
-        opened={!!deletingVersion}
-        onClose={() => {
-          if (!deleteLoading) {
-            setDeletingVersion(null);
-          }
-        }}
-        title="Xóa phiên bản game"
-        size="md"
-      >
         <Stack gap="md">
-          <Text size="sm">
-            Bạn có chắc muốn xóa phiên bản {deletingVersion?.name}? Thư mục phiên bản game sẽ bị xóa
-            khỏi máy chủ.
-          </Text>
-          {deletingVersion?.isActive && (
-            <Text size="sm" color="red">
-              Đây là phiên bản đang kích hoạt. Hệ thống chỉ cho xóa nếu các dịch vụ jxserver,
-              s3relay, bishop và goddess không chạy.
+          <div>
+            <Title order={4}>Quản lý các Phiên bản Game</Title>
+            <Text size="xs" color="dimmed">
+              Tải lên hoặc clone GitHub các phiên bản game để thay đổi nhanh thư mục chạy game
+              (SERVER_PATH) trong .env.
             </Text>
-          )}
-          <Group justify="flex-end">
-            <Button
-              variant="default"
-              disabled={deleteLoading}
-              onClick={() => setDeletingVersion(null)}
-            >
-              Hủy
+          </div>
+
+          <Group gap="md">
+            <Button loading={uploadMutation.isPending} onClick={() => setUploadModalOpened(true)}>
+              Tải lên file game
             </Button>
-            <Button color="red" loading={deleteLoading} onClick={handleConfirmDeleteVersion}>
-              Xóa phiên bản
+            <Button variant="light" onClick={() => setCloneModalOpened(true)}>
+              Tải về từ GitHub
             </Button>
           </Group>
-        </Stack>
-      </Modal>
 
-      <BrowseFolderModal
-        opened={!!browsingVersion}
-        onClose={() => setBrowsingVersion(null)}
-        versionName={browsingVersion || ''}
-        onSelectPath={handleSelectSubPath}
-        isSelecting={loading}
-      />
+          <Table striped highlightOnHover withTableBorder>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th>Tên phiên bản</Table.Th>
+                <Table.Th>Đường dẫn (.env)</Table.Th>
+                <Table.Th>Thời gian tải lên</Table.Th>
+                <Table.Th>Trạng thái</Table.Th>
+                <Table.Th>Thao tác</Table.Th>
+              </Table.Tr>
+            </Table.Thead>
+            <Table.Tbody>
+              {versions.length === 0 ? (
+                <Table.Tr>
+                  <Table.Td colSpan={5} align="center">
+                    <Text size="sm" color="dimmed">
+                      Chưa có phiên bản game nào tải lên.
+                    </Text>
+                  </Table.Td>
+                </Table.Tr>
+              ) : (
+                versions.map((ver) => (
+                  <Table.Tr key={ver.name}>
+                    <Table.Td>
+                      <Text fw={600}>{ver.name}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text style={{ fontFamily: 'monospace' }} size="xs">
+                        {ver.path}
+                      </Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="xs">{formatUploadedAt(ver.uploadedAt)}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      {ver.isActive ? (
+                        <Badge color="green">Đang chạy</Badge>
+                      ) : (
+                        <Badge color="gray">Sẵn sàng</Badge>
+                      )}
+                    </Table.Td>
+                    <Table.Td>
+                      <Group gap="xs">
+                        <Button
+                          size="xs"
+                          variant="filled"
+                          color="green"
+                          disabled={ver.isActive || loading}
+                          onClick={() => handleActivateVersion(ver.name)}
+                        >
+                          Sử dụng bản này
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="outline"
+                          color="blue"
+                          disabled={loading}
+                          onClick={() => handleBrowseFolder(ver.name)}
+                        >
+                          Duyệt thư mục
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          disabled={loading}
+                          onClick={() => openRenameModal(ver)}
+                        >
+                          Đổi tên
+                        </Button>
+                        <Button
+                          size="xs"
+                          variant="light"
+                          color="red"
+                          disabled={loading}
+                          onClick={() => handleDeleteVersion(ver)}
+                        >
+                          Xóa
+                        </Button>
+                      </Group>
+                    </Table.Td>
+                  </Table.Tr>
+                ))
+              )}
+            </Table.Tbody>
+          </Table>
+        </Stack>
+
+        <Modal
+          opened={cloneModalOpened}
+          onClose={() => {
+            cloneForm.reset();
+            setCloneModalOpened(false);
+          }}
+          title="Tải về trực tiếp từ GitHub"
+          size="md"
+        >
+          <form noValidate onSubmit={cloneForm.onSubmit(handleGitClone, focusFirstError)}>
+            <Stack gap="md">
+              <TextInput
+                id="url"
+                placeholder="https://github.com/user/repo"
+                label="GitHub URL"
+                required
+                {...cloneForm.getInputProps('url')}
+                key={cloneForm.key('url')}
+              />
+              <TextInput
+                id="branch"
+                placeholder="main"
+                label="Nhánh (Branch)"
+                required
+                {...cloneForm.getInputProps('branch')}
+                key={cloneForm.key('branch')}
+              />
+              <TextInput
+                id="clone-name"
+                placeholder="v1"
+                label="Tên thư mục lưu trữ"
+                required
+                {...cloneForm.getInputProps('name')}
+                key={cloneForm.key('name')}
+              />
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    cloneForm.reset();
+                    setCloneModalOpened(false);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" loading={cloneMutation.isPending}>
+                  Bắt đầu tải (Clone)
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Modal>
+
+        <Modal
+          opened={uploadModalOpened}
+          onClose={() => {
+            if (!uploadMutation.isPending) {
+              uploadForm.reset();
+              setUploadModalOpened(false);
+            }
+          }}
+          title="Tải lên phiên bản game"
+          size="md"
+        >
+          <form noValidate onSubmit={uploadForm.onSubmit(handleUpload, focusFirstError)}>
+            <Stack gap="md">
+              <TextInput
+                id="upload-name"
+                label="Tên phiên bản"
+                required
+                placeholder="mel2026"
+                {...uploadForm.getInputProps('name')}
+                key={uploadForm.key('name')}
+              />
+              <Stack gap="xs">
+                <Group gap="sm">
+                  <FileButton
+                    onChange={(file) => uploadForm.setFieldValue('file', file)}
+                    accept=".zip,.tar.gz,.tgz"
+                  >
+                    {(props) => (
+                      <Button {...props} variant="light">
+                        Chọn file
+                      </Button>
+                    )}
+                  </FileButton>
+                  <Text size="sm" color={uploadForm.values.file ? undefined : 'dimmed'}>
+                    {uploadForm.values.file
+                      ? (uploadForm.values.file as File).name
+                      : 'Chưa chọn file'}
+                  </Text>
+                </Group>
+                {uploadForm.errors.file && (
+                  <Text size="xs" color="red">
+                    {uploadForm.errors.file}
+                  </Text>
+                )}
+              </Stack>
+
+              {(uploadMutation.isPending || uploadProgress > 0) && (
+                <Stack gap={4}>
+                  <Progress value={uploadProgress} />
+                  <Text size="xs" color="dimmed">
+                    {uploadStatus === 'extracting'
+                      ? 'Đang giải nén...'
+                      : `Đang tải lên ${uploadProgress}%`}
+                  </Text>
+                </Stack>
+              )}
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  disabled={uploadMutation.isPending}
+                  onClick={() => {
+                    uploadForm.reset();
+                    setUploadModalOpened(false);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" loading={uploadMutation.isPending}>
+                  Upload
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Modal>
+
+        <Modal
+          opened={!!renamingVersion}
+          onClose={() => {
+            renameForm.reset();
+            setRenamingVersion(null);
+          }}
+          title="Đổi tên phiên bản"
+          size="md"
+        >
+          <form noValidate onSubmit={renameForm.onSubmit(handleRename, focusFirstError)}>
+            <Stack gap="md">
+              <TextInput
+                id="rename-name"
+                label="Tên phiên bản mới"
+                required
+                {...renameForm.getInputProps('name')}
+                key={renameForm.key('name')}
+              />
+              <Group justify="flex-end">
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    renameForm.reset();
+                    setRenamingVersion(null);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" loading={loading}>
+                  Lưu
+                </Button>
+              </Group>
+            </Stack>
+          </form>
+        </Modal>
+
+        <Modal
+          opened={!!deletingVersion}
+          onClose={() => {
+            if (!deleteLoading) {
+              setDeletingVersion(null);
+            }
+          }}
+          title="Xóa phiên bản game"
+          size="md"
+        >
+          <Stack gap="md">
+            <Text size="sm">
+              Bạn có chắc muốn xóa phiên bản {deletingVersion?.name}? Thư mục phiên bản game sẽ bị
+              xóa khỏi máy chủ.
+            </Text>
+            {deletingVersion?.isActive && (
+              <Text size="sm" color="red">
+                Đây là phiên bản đang kích hoạt. Hệ thống chỉ cho xóa nếu các dịch vụ jxserver,
+                s3relay, bishop và goddess không chạy.
+              </Text>
+            )}
+            <Group justify="flex-end">
+              <Button
+                variant="default"
+                disabled={deleteLoading}
+                onClick={() => setDeletingVersion(null)}
+              >
+                Hủy
+              </Button>
+              <Button color="red" loading={deleteLoading} onClick={handleConfirmDeleteVersion}>
+                Xóa phiên bản
+              </Button>
+            </Group>
+          </Stack>
+        </Modal>
+
+        <BrowseFolderModal
+          opened={!!browsingVersion}
+          onClose={() => setBrowsingVersion(null)}
+          versionName={browsingVersion || ''}
+          onSelectPath={handleSelectSubPath}
+          isSelecting={loading}
+        />
       </Card>
     </Stack>
   );
