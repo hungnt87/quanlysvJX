@@ -28,13 +28,18 @@ export type SystemInfo = {
   runningCoreServices: string[];
 };
 
-const fallbackIp = '127.0.0.1';
 const coreServiceNames = new Set(['jxserver', 's3relay', 'bishop', 'goddess']);
+const loopbackIp = '127.0.0.1';
+const virtualInterfacePattern = /^(docker\d*|br-.+|veth.+|virbr\d*|lo)$/;
+const ipv4Pattern = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 export function getServerIpChoices(interfaces?: NodeJS.Dict<NetworkInterfaceInfo[]>) {
-  const ips = new Set<string>([fallbackIp]);
+  const ips = new Set<string>();
   const detectedInterfaces = interfaces ?? safeNetworkInterfaces();
-  for (const entries of Object.values(detectedInterfaces)) {
+  for (const [name, entries] of Object.entries(detectedInterfaces)) {
+    if (isVirtualInterface(name)) {
+      continue;
+    }
     for (const entry of entries ?? []) {
       if (isIpv4Interface(entry)) {
         ips.add(entry.address);
@@ -57,19 +62,20 @@ export function normalizeGameNetworkConfig(
   ipChoices: string[]
 ): GameNetworkConfig {
   return {
-    jxIp: normalizeEnvIp(env.JX_IP, ipChoices),
-    mysqlIp: normalizeEnvIp(env.JX_MYSQL_IP, ipChoices),
-    paysysIp: normalizeEnvIp(env.JX_PAYSYS_IP, ipChoices),
-    mssqlIp: normalizeEnvIp(env.JX_MSSQL_IP, ipChoices)
+    jxIp: normalizeHostIp(env.JX_IP, ipChoices),
+    mysqlIp: normalizeIpv4(env.JX_MYSQL_IP),
+    paysysIp: normalizeIpv4(env.JX_PAYSYS_IP),
+    mssqlIp: normalizeIpv4(env.JX_MSSQL_IP)
   };
 }
 
 export function validateGameNetworkPayload(payload: unknown, ipChoices: string[]) {
   const parsed = gameNetworkPayloadSchema.parse(payload);
-  for (const value of Object.values(parsed)) {
-    if (!ipChoices.includes(value)) {
-      throw new Error('IP không hợp lệ. Vui lòng chọn IP từ danh sách server.');
-    }
+  if (!ipChoices.includes(parsed.jxIp)) {
+    throw new Error('IP không hợp lệ. Vui lòng chọn IP thật của máy chủ.');
+  }
+  for (const value of [parsed.mysqlIp, parsed.paysysIp, parsed.mssqlIp]) {
+    assertIpv4(value);
   }
   return parsed;
 }
@@ -110,13 +116,34 @@ export function buildSystemInfo(options: {
   };
 }
 
-function normalizeEnvIp(value: string | undefined, ipChoices: string[]) {
+function normalizeHostIp(value: string | undefined, ipChoices: string[]) {
   if (value && ipChoices.includes(value)) {
     return value;
   }
-  return fallbackIp;
+  return ipChoices[0] ?? '';
+}
+
+function normalizeIpv4(value: string | undefined) {
+  if (value && isIpv4(value)) {
+    return value;
+  }
+  return loopbackIp;
+}
+
+function assertIpv4(value: string) {
+  if (!isIpv4(value)) {
+    throw new Error('IP không hợp lệ. Vui lòng nhập đúng IPv4.');
+  }
+}
+
+function isIpv4(value: string) {
+  return ipv4Pattern.test(value);
+}
+
+function isVirtualInterface(name: string) {
+  return virtualInterfacePattern.test(name);
 }
 
 function isIpv4Interface(entry: NetworkInterfaceInfo) {
-  return entry.family === 'IPv4' && Boolean(entry.address);
+  return entry.family === 'IPv4' && !entry.internal && isIpv4(entry.address);
 }

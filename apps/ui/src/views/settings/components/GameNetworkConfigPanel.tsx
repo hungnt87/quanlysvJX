@@ -1,4 +1,4 @@
-import { Alert, Button, Card, Group, Select, Stack, Text, Title } from '@mantine/core';
+import { Alert, Button, Card, Group, Select, Stack, Text, TextInput, Title } from '@mantine/core';
 import { useEffect, useMemo, useState } from 'react';
 import { useSaveGameNetwork, useSystemInfo } from '@/hooks/useSystemInfo';
 import type { GameNetworkConfig } from '@/services/types';
@@ -9,7 +9,7 @@ type Props = {
 };
 
 const fallbackConfig: GameNetworkConfig = {
-  jxIp: '127.0.0.1',
+  jxIp: '',
   mysqlIp: '127.0.0.1',
   paysysIp: '127.0.0.1',
   mssqlIp: '127.0.0.1',
@@ -27,7 +27,7 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
   }, [data?.gameNetwork]);
 
   const ipOptions = useMemo(
-    () => (data?.ipChoices ?? ['127.0.0.1']).map((ip) => ({ value: ip, label: ip })),
+    () => (data?.ipChoices ?? []).map((ip) => ({ value: ip, label: ip })),
     [data?.ipChoices]
   );
 
@@ -69,29 +69,33 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
             value={values.jxIp}
             onChange={(value) => setField('jxIp', value)}
             disabled={isLoading || saveMutation.isPending}
+            placeholder="Chưa tìm thấy IP host"
           />
-          <Select
+          <TextInput
             label="MySQL IP"
-            data={ipOptions}
             value={values.mysqlIp}
-            onChange={(value) => setField('mysqlIp', value)}
+            onChange={(event) => setField('mysqlIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
+            inputMode="numeric"
+            placeholder="127.0.0.1"
           />
         </Group>
         <Group grow align="flex-start">
-          <Select
+          <TextInput
             label="Paysys IP"
-            data={ipOptions}
             value={values.paysysIp}
-            onChange={(value) => setField('paysysIp', value)}
+            onChange={(event) => setField('paysysIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
+            inputMode="numeric"
+            placeholder="127.0.0.1"
           />
-          <Select
+          <TextInput
             label="MSSQL IP"
-            data={ipOptions}
             value={values.mssqlIp}
-            onChange={(value) => setField('mssqlIp', value)}
+            onChange={(event) => setField('mssqlIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
+            inputMode="numeric"
+            placeholder="127.0.0.1"
           />
         </Group>
 

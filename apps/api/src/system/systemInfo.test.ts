@@ -22,42 +22,63 @@ afterEach(() => {
 });
 
 describe('systemInfo domain', () => {
-  it('builds IPv4 choices from server network interfaces plus loopback', () => {
+  it('builds host IPv4 choices and filters loopback, docker, and bridge interfaces', () => {
     const choices = getServerIpChoices({
       lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true } as any],
       eth0: [{ address: '192.168.1.20', family: 'IPv4', internal: false } as any],
-      docker0: [{ address: '172.18.0.1', family: 'IPv4', internal: false } as any]
+      wlan0: [{ address: '10.10.10.5', family: 'IPv4', internal: false } as any],
+      docker0: [{ address: '172.18.0.1', family: 'IPv4', internal: false } as any],
+      'br-123': [{ address: '172.19.0.1', family: 'IPv4', internal: false } as any],
+      vethabc: [{ address: '169.254.10.2', family: 'IPv4', internal: false } as any]
     });
 
-    expect(choices).toEqual(['127.0.0.1', '172.18.0.1', '192.168.1.20']);
+    expect(choices).toEqual(['10.10.10.5', '192.168.1.20']);
   });
 
-  it('replaces missing and legacy auto env values with 127.0.0.1 for the form', () => {
+  it('replaces missing and legacy auto env values with safe defaults for the form', () => {
     expect(
       normalizeGameNetworkConfig({ JX_IP: 'auto', JX_MYSQL_IP: '', JX_PAYSYS_IP: '192.168.1.20' }, [
-        '127.0.0.1',
         '192.168.1.20'
       ])
     ).toEqual({
-      jxIp: '127.0.0.1',
+      jxIp: '192.168.1.20',
       mysqlIp: '127.0.0.1',
       paysysIp: '192.168.1.20',
       mssqlIp: '127.0.0.1'
     });
   });
 
-  it('rejects auto and IPs outside the detected choices', () => {
+  it('requires JX IP to be a host choice and allows other valid IPv4 addresses', () => {
     expect(() =>
       validateGameNetworkPayload(
         { jxIp: 'auto', mysqlIp: '127.0.0.1', paysysIp: '127.0.0.1', mssqlIp: '127.0.0.1' },
-        ['127.0.0.1']
+        ['192.168.1.20']
       )
     ).toThrow('IP không hợp lệ');
 
     expect(() =>
       validateGameNetworkPayload(
-        { jxIp: '10.0.0.8', mysqlIp: '127.0.0.1', paysysIp: '127.0.0.1', mssqlIp: '127.0.0.1' },
-        ['127.0.0.1']
+        { jxIp: '127.0.0.1', mysqlIp: '10.0.0.8', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' },
+        ['192.168.1.20']
+      )
+    ).toThrow('IP không hợp lệ');
+
+    expect(
+      validateGameNetworkPayload(
+        { jxIp: '192.168.1.20', mysqlIp: '10.0.0.8', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' },
+        ['192.168.1.20']
+      )
+    ).toEqual({
+      jxIp: '192.168.1.20',
+      mysqlIp: '10.0.0.8',
+      paysysIp: '172.18.0.1',
+      mssqlIp: '8.8.8.8'
+    });
+
+    expect(() =>
+      validateGameNetworkPayload(
+        { jxIp: '192.168.1.20', mysqlIp: '999.1.1.1', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' },
+        ['192.168.1.20']
       )
     ).toThrow('IP không hợp lệ');
   });
@@ -71,7 +92,7 @@ describe('systemInfo domain', () => {
 
     const info = buildSystemInfo({
       envFilePath: envPath,
-      ipChoices: ['127.0.0.1', '192.168.1.20'],
+      ipChoices: ['192.168.1.20'],
       coreServices: [
         { name: 'jxserver', state: 'running' },
         { name: 'goddess', state: 'exited' }

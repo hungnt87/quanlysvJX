@@ -1,7 +1,8 @@
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildApp } from '../app.js';
 import type { ManagerConfig } from '../config.js';
 
@@ -24,9 +25,15 @@ function testConfig(projectRoot: string): ManagerConfig {
 beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), 'system-routes-'));
   writeFileSync(root + '/.env', 'JX_IP=auto\nJX_MYSQL_IP=auto\nJX_PAYSYS_IP=auto\nJX_MSSQL_IP=auto\n', 'utf8');
+  vi.spyOn(os, 'networkInterfaces').mockReturnValue({
+    eth0: [{ address: '192.168.1.20', family: 'IPv4', internal: false } as any],
+    docker0: [{ address: '172.18.0.1', family: 'IPv4', internal: false } as any],
+    lo: [{ address: '127.0.0.1', family: 'IPv4', internal: true } as any]
+  });
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -41,33 +48,42 @@ describe('system routes', () => {
 
     expect(response.statusCode).toBe(200);
     expect(response.json().data).toMatchObject({
-      serverIp: '127.0.0.1',
+      serverIp: '192.168.1.20',
       mysqlIp: '127.0.0.1',
       mssqlIp: '127.0.0.1',
       coreServicesRunning: true,
       runningCoreServices: ['jxserver']
     });
-    expect(response.json().data.ipChoices).toContain('127.0.0.1');
+    expect(response.json().data.ipChoices).toEqual(['192.168.1.20']);
   });
 
-  it('saves game network values to env and rejects auto', async () => {
+  it('saves host JX IP and free IPv4 network values while rejecting auto', async () => {
     const app = await buildApp({ config: testConfig(root) });
 
     const badResponse = await app.inject({
       method: 'PUT',
       url: '/api/system/game-network',
-      payload: { jxIp: 'auto', mysqlIp: '127.0.0.1', paysysIp: '127.0.0.1', mssqlIp: '127.0.0.1' }
+      payload: { jxIp: 'auto', mysqlIp: '10.0.0.8', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' }
     });
     expect(badResponse.statusCode).toBe(400);
+
+    const badJxResponse = await app.inject({
+      method: 'PUT',
+      url: '/api/system/game-network',
+      payload: { jxIp: '127.0.0.1', mysqlIp: '10.0.0.8', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' }
+    });
+    expect(badJxResponse.statusCode).toBe(400);
 
     const response = await app.inject({
       method: 'PUT',
       url: '/api/system/game-network',
-      payload: { jxIp: '127.0.0.1', mysqlIp: '127.0.0.1', paysysIp: '127.0.0.1', mssqlIp: '127.0.0.1' }
+      payload: { jxIp: '192.168.1.20', mysqlIp: '10.0.0.8', paysysIp: '172.18.0.1', mssqlIp: '8.8.8.8' }
     });
 
     expect(response.statusCode).toBe(200);
-    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_IP=127.0.0.1');
-    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_MSSQL_IP=127.0.0.1');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_IP=192.168.1.20');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_MYSQL_IP=10.0.0.8');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_PAYSYS_IP=172.18.0.1');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_MSSQL_IP=8.8.8.8');
   });
 });
