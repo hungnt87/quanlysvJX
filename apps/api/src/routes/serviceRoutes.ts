@@ -2,9 +2,10 @@ import type { FastifyInstance } from 'fastify';
 import { ok } from '../api/envelope.js';
 import { CommandError, ValidationError } from '../api/errors.js';
 import { assertServiceName } from '../services/serviceAllowlist.js';
+import { startServiceWithProgress } from '../services/serviceStartOrchestrator.js';
 import { parseManagedServiceStatuses } from '../services/serviceStatus.js';
 import { readVersionRegistry } from '../versions/versionRegistry.js';
-import type { ComposeStream } from '../services/composeRunner.js';
+import type { StartServiceEvent } from '../services/serviceStartEvents.js';
 
 function assertActiveVersion(projectRoot: string) {
   const registry = readVersionRegistry(projectRoot);
@@ -36,10 +37,7 @@ export async function registerServiceRoutes(app: FastifyInstance) {
     const name = assertServiceName((request.params as { name: string }).name);
     assertActiveVersion(projectRoot);
 
-    // Chạy docker compose up -d --build --no-deps để build và khởi chạy độc lập container được chỉ định,
-    // bỏ qua việc build/khởi chạy các phụ thuộc khác (ngăn chặn build kép).
-    const args = ['up', '-d', '--build', '--no-deps', name];
-    const stream = app.deps.streamCompose(args);
+    const abortController = new AbortController();
     let closed = false;
 
     reply.hijack();
@@ -51,35 +49,40 @@ export async function registerServiceRoutes(app: FastifyInstance) {
     });
     reply.raw.write(':\n\n');
 
-    const writeLog = (chunk: unknown) => {
-      if (!reply.raw.destroyed) {
-        reply.raw.write(`event: log\ndata: ${JSON.stringify(String(chunk))}\n\n`);
+    const writeEvent = (event: StartServiceEvent) => {
+      if (reply.raw.destroyed) {
+        return;
+      }
+      reply.raw.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+      if (event.type === 'close') {
+        closed = true;
+        reply.raw.end();
       }
     };
 
-    stream.stdout.on('data', writeLog);
-    stream.stderr.on('data', writeLog);
-    stream.on('error', (error: Error) => {
-      if (!reply.raw.destroyed) {
-        reply.raw.write(`event: error\ndata: ${JSON.stringify(error.message)}\n\n`);
-        reply.raw.end();
-      }
-    });
-    stream.on('close', (code) => {
-      closed = true;
-      if (!reply.raw.destroyed) {
-        if (code === 0) {
-          reply.raw.write(`event: log\ndata: ${JSON.stringify(`[Hệ thống] Khởi chạy container ${name} thành công!\n`)}\n\n`);
-        }
-        reply.raw.write(`event: close\ndata: ${JSON.stringify({ exitCode: code })}\n\n`);
-        reply.raw.end();
+    request.raw.on('close', () => {
+      if (!closed) {
+        abortController.abort();
       }
     });
 
-    request.raw.on('close', () => {
-      if (!closed) {
-        stream.kill('SIGTERM');
-      }
+    void startServiceWithProgress({
+      serviceName: name,
+      runCompose: app.deps.runCompose,
+      runDocker: app.deps.runDocker,
+      streamCompose: app.deps.streamCompose,
+      emit: writeEvent,
+      signal: abortController.signal
+    }).catch((error: unknown) => {
+      const detail = error instanceof Error ? error.message : String(error);
+      writeEvent({
+        type: 'error',
+        code: 'UP_FAILED',
+        phase: 'start',
+        message: `Khởi chạy dịch vụ ${name} thất bại.`,
+        detail
+      });
+      writeEvent({ type: 'close', exitCode: 1 });
     });
   });
 
