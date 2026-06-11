@@ -170,7 +170,8 @@ describe('service routes', () => {
     expect(response.payload).toContain('event: ready');
     expect(response.payload).toContain('event: close');
     expect(dockerCalls).toEqual([['image', 'inspect', 'paysys']]);
-    expect(composeCalls).toContainEqual(['up', '-d', 'paysys']);
+    expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'paysys']);
+    expect(composeCalls).not.toContainEqual(['up', '-d', 'paysys']);
     expect(composeCalls).not.toContainEqual(['up', '-d', '--build', '--no-deps', 'paysys']);
   });
 

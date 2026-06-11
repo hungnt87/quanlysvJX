@@ -97,7 +97,7 @@ async function runStartPipeline(options: StartOptions) {
     phase: 'start',
     errorCode: 'UP_FAILED',
     message: `Khởi chạy dịch vụ ${options.serviceName} thất bại.`,
-    command: () => options.streamCompose(['up', '-d', options.serviceName]),
+    command: () => options.streamCompose(['up', '-d', '--no-build', options.serviceName]),
     emit,
     signal: options.signal
   });

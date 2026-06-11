@@ -76,7 +76,7 @@ describe('startServiceWithProgress', () => {
     expect(dockerCalls).toEqual([['image', 'inspect', 'paysys']]);
     expect(composeCalls).toEqual([
       ['config', '--format', 'json'],
-      ['up', '-d', 'paysys'],
+      ['up', '-d', '--no-build', 'paysys'],
       ['ps', '--all', '--format', 'json']
     ]);
     expect(events.some((event) => event.type === 'ready')).toBe(true);
@@ -109,7 +109,8 @@ describe('startServiceWithProgress', () => {
     });
 
     expect(composeCalls).toContainEqual(['build', 'paysys']);
-    expect(composeCalls).toContainEqual(['up', '-d', 'paysys']);
+    expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'paysys']);
+    expect(composeCalls).not.toContainEqual(['up', '-d', 'paysys']);
   });
 
   it('pulls a missing external image before up', async () => {
@@ -139,7 +140,7 @@ describe('startServiceWithProgress', () => {
     });
 
     expect(composeCalls).toContainEqual(['pull', 'jxmysql']);
-    expect(composeCalls).toContainEqual(['up', '-d', 'jxmysql']);
+    expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'jxmysql']);
   });
 
   it('emits BUILD_FAILED when build exits non-zero', async () => {
