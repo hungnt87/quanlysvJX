@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Modal,
@@ -11,7 +11,8 @@ import {
   Loader,
   Alert
 } from '@mantine/core';
-import { api } from '@/services/client';
+import { versionService } from '@/services/versionService';
+import { versionKeys } from '@/hooks/useVersions';
 
 type Props = {
   opened: boolean;
@@ -24,7 +25,6 @@ type Props = {
 export function BrowseFolderModal({ opened, onClose, versionName, onSelectPath, isSelecting }: Props) {
   const [currentPath, setCurrentPath] = useState('');
 
-  // Reset current path when modal opens/changes version
   useEffect(() => {
     if (opened) {
       setCurrentPath('');
@@ -32,20 +32,28 @@ export function BrowseFolderModal({ opened, onClose, versionName, onSelectPath, 
   }, [opened, versionName]);
 
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['browseVersion', versionName, currentPath],
-    queryFn: () => api.browseVersion(versionName, currentPath),
+    queryKey: versionKeys.browse(versionName, currentPath),
+    queryFn: () => versionService.browseVersion(versionName, currentPath),
     enabled: opened && !!versionName
   });
 
-  const handleSelectDir = (dir: string) => {
-    setCurrentPath(currentPath ? `${currentPath}/${dir}` : dir);
-  };
+  const handleSelectDir = useCallback((dir: string) => {
+    setCurrentPath((prev) => (prev ? `${prev}/${dir}` : dir));
+  }, []);
 
-  const handleGoBack = () => {
+  const handleGoBack = useCallback(() => {
     if (data && data.parentPath !== undefined) {
       setCurrentPath(data.parentPath || '');
     }
-  };
+  }, [data]);
+
+  const handleSelectPathClick = useCallback(() => {
+    onSelectPath(currentPath);
+  }, [onSelectPath, currentPath]);
+
+  const handleRefetch = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
   return (
     <Modal
@@ -74,7 +82,7 @@ export function BrowseFolderModal({ opened, onClose, versionName, onSelectPath, 
         ) : error ? (
           <Alert color="red" title="Lỗi">
             Không thể tải cấu trúc thư mục.
-            <Button size="xs" variant="subtle" color="red" onClick={() => refetch()} mt="xs">Tải lại</Button>
+            <Button size="xs" variant="subtle" color="red" onClick={handleRefetch} mt="xs">Tải lại</Button>
           </Alert>
         ) : (
           <Stack gap="xs">
@@ -86,7 +94,6 @@ export function BrowseFolderModal({ opened, onClose, versionName, onSelectPath, 
                     key={dir}
                     icon={
                       <ThemeIcon color="yellow" size={24} radius="xl">
-                        {/* Folder icon representation */}
                         📁
                       </ThemeIcon>
                     }
@@ -112,7 +119,7 @@ export function BrowseFolderModal({ opened, onClose, versionName, onSelectPath, 
           <Button
             color="green"
             loading={isSelecting}
-            onClick={() => onSelectPath(currentPath)}
+            onClick={handleSelectPathClick}
           >
             Sử dụng đường dẫn này
           </Button>

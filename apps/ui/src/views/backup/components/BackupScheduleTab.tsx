@@ -1,8 +1,9 @@
 import { Button, Checkbox, Group, NumberInput, Paper, SimpleGrid, Stack, Switch, Text, TextInput, Title } from '@mantine/core';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
-import { api } from '@/services/client';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { BackupKind, DatabaseBackupSchedule } from '@/services/types';
+import { useBackups, backupKeys } from '@/hooks/useBackups';
+import { backupService } from '@/services/backupService';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -28,51 +29,41 @@ export function BackupScheduleTab({ onSuccess, onError }: Props) {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<Record<BackupKind, DatabaseBackupSchedule>>(fallbackSchedules);
   const [loadingKind, setLoadingKind] = useState<BackupKind | null>(null);
-  const schedulesQuery = useQuery({ queryKey: ['backupSchedules'], queryFn: api.schedules });
-  const saveMutation = useMutation({
-    mutationFn: ({ kind, schedule }: { kind: BackupKind; schedule: DatabaseBackupSchedule }) => api.saveSchedule(kind, schedule),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['backupSchedules'] })
-  });
-  const runNowMutation = useMutation({
-    mutationFn: (kind: BackupKind) => api.backup(kind),
-    onSuccess: async () => queryClient.invalidateQueries({ queryKey: ['backupJobs'] })
-  });
+
+  const { schedules, saveSchedule, createBackup } = useBackups();
+
+  const onErrorRef = useRef(onError);
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => {
+    onErrorRef.current = onError;
+    onSuccessRef.current = onSuccess;
+  }, [onError, onSuccess]);
 
   useEffect(() => {
-    if (schedulesQuery.data) {
-      setDrafts(schedulesQuery.data.schedules);
+    if (schedules?.schedules) {
+      setDrafts(schedules.schedules);
     }
-  }, [schedulesQuery.data]);
+  }, [schedules]);
 
-  useEffect(() => {
-    if (schedulesQuery.isError) {
-      onError(schedulesQuery.error instanceof Error ? schedulesQuery.error.message : 'Unable to load schedules');
-    }
-  }, [onError, schedulesQuery.error, schedulesQuery.isError]);
-
-  async function saveSchedule(kind: BackupKind) {
+  const handleSaveSchedule = useCallback((kind: BackupKind) => {
     setLoadingKind(kind);
-    try {
-      await saveMutation.mutateAsync({ kind, schedule: drafts[kind] });
-      onSuccess(`${kind.toUpperCase()} schedule saved`);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Unable to save schedule');
-    } finally {
-      setLoadingKind(null);
-    }
-  }
+    saveSchedule({ kind, schedule: drafts[kind] })
+      .then(() => onSuccessRef.current(`${kind.toUpperCase()} schedule saved`))
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Unable to save schedule'))
+      .finally(() => setLoadingKind(null));
+  }, [drafts, saveSchedule]);
 
-  async function runNow(kind: BackupKind) {
+  const handleRunNow = useCallback((kind: BackupKind) => {
     setLoadingKind(kind);
-    try {
-      await runNowMutation.mutateAsync(kind);
-      onSuccess(`${kind.toUpperCase()} backup started`);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Unable to start backup');
-    } finally {
-      setLoadingKind(null);
-    }
-  }
+    createBackup(kind)
+      .then(() => onSuccessRef.current(`${kind.toUpperCase()} backup started`))
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Unable to start backup'))
+      .finally(() => setLoadingKind(null));
+  }, [createBackup]);
+
+  const handleDraftChange = useCallback((kind: BackupKind, schedule: DatabaseBackupSchedule) => {
+    setDrafts((current) => ({ ...current, [kind]: schedule }));
+  }, []);
 
   return (
     <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
@@ -82,9 +73,9 @@ export function BackupScheduleTab({ onSuccess, onError }: Props) {
           kind={kind}
           schedule={drafts[kind]}
           loading={loadingKind === kind}
-          onChange={(schedule) => setDrafts((current) => ({ ...current, [kind]: schedule }))}
-          onSave={() => saveSchedule(kind)}
-          onRunNow={() => runNow(kind)}
+          onChange={(schedule) => handleDraftChange(kind, schedule)}
+          onSave={() => handleSaveSchedule(kind)}
+          onRunNow={() => handleRunNow(kind)}
         />
       ))}
     </SimpleGrid>
@@ -101,28 +92,44 @@ type PanelProps = {
 };
 
 function SchedulePanel({ kind, schedule, loading, onChange, onSave, onRunNow }: PanelProps) {
+  const handleEnabledChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...schedule, enabled: event.currentTarget.checked });
+  }, [schedule, onChange]);
+
+  const handleDaysChange = useCallback((values: string[]) => {
+    onChange({ ...schedule, daysOfWeek: values.map(Number) as DatabaseBackupSchedule['daysOfWeek'] });
+  }, [schedule, onChange]);
+
+  const handleTimeChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...schedule, time: event.currentTarget.value });
+  }, [schedule, onChange]);
+
+  const handleRetentionChange = useCallback((value: string | number) => {
+    onChange({ ...schedule, retentionDays: typeof value === 'number' ? value : 14 });
+  }, [schedule, onChange]);
+
   return (
     <Paper withBorder p="md">
       <Stack gap="sm">
         <Group justify="space-between">
           <Title order={4}>{kind.toUpperCase()} schedule</Title>
-          <Switch checked={schedule.enabled} onChange={(event) => onChange({ ...schedule, enabled: event.currentTarget.checked })} label="Enabled" />
+          <Switch checked={schedule.enabled} onChange={handleEnabledChange} label="Enabled" />
         </Group>
         <Checkbox.Group
           label="Days"
           value={schedule.daysOfWeek.map(String)}
-          onChange={(values) => onChange({ ...schedule, daysOfWeek: values.map(Number) as DatabaseBackupSchedule['daysOfWeek'] })}
+          onChange={handleDaysChange}
         >
           <Group mt="xs">
             {dayOptions.map((day) => <Checkbox key={day.value} value={day.value} label={day.label} />)}
           </Group>
         </Checkbox.Group>
-        <TextInput label="Server time" type="time" value={schedule.time} onChange={(event) => onChange({ ...schedule, time: event.currentTarget.value })} />
+        <TextInput label="Server time" type="time" value={schedule.time} onChange={handleTimeChange} />
         <NumberInput
           label="Retention days"
           min={1}
           value={schedule.retentionDays}
-          onChange={(value) => onChange({ ...schedule, retentionDays: typeof value === 'number' ? value : 14 })}
+          onChange={handleRetentionChange}
         />
         <Text size="sm" c="dimmed">Last run key: {schedule.lastRunKey ?? 'Never'}</Text>
         <Group justify="flex-end">

@@ -1,12 +1,12 @@
 import { Badge, Button, Group, Select, Stack, Table, Text, TextInput } from '@mantine/core';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
-import { api } from '@/services/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { useMemo, useState, useCallback } from 'react';
 import type { BackupFile, BackupKind } from '@/services/types';
-import { BackupEditModal } from '@/features/backup/components/BackupEditModal';
-import { BackupUploadModal } from '@/features/backup/components/BackupUploadModal';
-import { DeleteBackupModal } from '@/features/backup/components/DeleteBackupModal';
-import { RestoreModal } from '@/features/backup/components/RestoreModal';
+import { useBackups, backupKeys } from '@/hooks/useBackups';
+import { BackupEditModal } from './BackupEditModal';
+import { BackupUploadModal } from './BackupUploadModal';
+import { DeleteBackupModal } from './DeleteBackupModal';
+import { RestoreModal } from './RestoreModal';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -23,40 +23,65 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
   const [editingFile, setEditingFile] = useState<BackupFile | null>(null);
   const [deletingFile, setDeletingFile] = useState<BackupFile | null>(null);
   const [restoringFile, setRestoringFile] = useState<BackupFile | null>(null);
-  const filesQuery = useQuery({ queryKey: ['backups'], queryFn: api.backups });
-  const files = filesQuery.data ?? [];
 
-  async function invalidateBackupData() {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['backups'] }),
-      queryClient.invalidateQueries({ queryKey: ['backupJobs'] })
-    ]);
-  }
+  const {
+    backups: files,
+    createBackup,
+    uploadBackup,
+    updateBackup,
+    deleteBackup,
+    restoreBackup,
+    isLoading
+  } = useBackups();
 
-  const backupMutation = useMutation({ mutationFn: () => api.backup('all'), onSuccess: invalidateBackupData });
-  const uploadMutation = useMutation({ mutationFn: ({ kind, file }: { kind: BackupKind; file: File }) => api.uploadBackup(kind, file), onSuccess: invalidateBackupData });
-  const updateMutation = useMutation({
-    mutationFn: ({ file, filename, note }: { file: BackupFile; filename: string; note: string | null }) => api.updateBackup(file.kind, file.filename, { filename, note }),
-    onSuccess: invalidateBackupData
-  });
-  const deleteMutation = useMutation({ mutationFn: (file: BackupFile) => api.deleteBackup(file.kind, file.filename), onSuccess: invalidateBackupData });
-  const restoreMutation = useMutation({ mutationFn: (file: BackupFile) => api.restore(file.kind, file.filename), onSuccess: invalidateBackupData });
-  const loading = backupMutation.isPending || uploadMutation.isPending || updateMutation.isPending || deleteMutation.isPending || restoreMutation.isPending;
+  const handleBackupNow = useCallback(() => {
+    createBackup('all')
+      .then(() => onSuccess('Backup completed'))
+      .catch((error) => onError(error instanceof Error ? error.message : 'Backup action failed'));
+  }, [createBackup, onSuccess, onError]);
 
-  async function runAction(action: () => Promise<unknown>, successMessage: string) {
-    try {
-      await action();
-      onSuccess(successMessage);
-    } catch (error) {
-      onError(error instanceof Error ? error.message : 'Backup action failed');
-    }
-  }
+  const handleUpload = useCallback((kind: BackupKind, file: File) => {
+    uploadBackup({ kind, file })
+      .then(() => {
+        onSuccess('Backup uploaded');
+        setUploadOpened(false);
+      })
+      .catch((error) => onError(error instanceof Error ? error.message : 'Upload failed'));
+  }, [uploadBackup, onSuccess, onError]);
 
-  useEffect(() => {
-    if (filesQuery.isError) {
-      onError(filesQuery.error instanceof Error ? filesQuery.error.message : 'Unable to load backups');
-    }
-  }, [filesQuery.error, filesQuery.isError, onError]);
+  const handleSaveEdit = useCallback((filename: string, note: string | null) => {
+    if (!editingFile) return;
+    updateBackup({ kind: editingFile.kind, currentFilename: editingFile.filename, payload: { filename, note } })
+      .then(() => {
+        onSuccess('Backup updated');
+        setEditingFile(null);
+      })
+      .catch((error) => onError(error instanceof Error ? error.message : 'Update failed'));
+  }, [editingFile, updateBackup, onSuccess, onError]);
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (!deletingFile) return;
+    deleteBackup({ kind: deletingFile.kind, filename: deletingFile.filename })
+      .then(() => {
+        onSuccess('Backup deleted');
+        setDeletingFile(null);
+      })
+      .catch((error) => onError(error instanceof Error ? error.message : 'Delete failed'));
+  }, [deletingFile, deleteBackup, onSuccess, onError]);
+
+  const handleRestoreConfirm = useCallback(() => {
+    if (!restoringFile) return;
+    restoreBackup({ kind: restoringFile.kind, filename: restoringFile.filename })
+      .then(() => {
+        onSuccess('Restore completed');
+        setRestoringFile(null);
+      })
+      .catch((error) => onError(error instanceof Error ? error.message : 'Restore failed'));
+  }, [restoringFile, restoreBackup, onSuccess, onError]);
+
+  const handleRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: backupKeys.lists() });
+  }, [queryClient]);
 
   const filteredFiles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -71,9 +96,9 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
       <Stack gap="md">
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
-            <Button loading={backupMutation.isPending} onClick={() => runAction(() => backupMutation.mutateAsync(), 'Backup completed')}>Backup now</Button>
+            <Button onClick={handleBackupNow}>Backup now</Button>
             <Button variant="light" onClick={() => setUploadOpened(true)}>Upload</Button>
-            <Button variant="default" loading={filesQuery.isFetching} onClick={() => queryClient.invalidateQueries({ queryKey: ['backups'] })}>Refresh</Button>
+            <Button variant="default" onClick={handleRefresh}>Refresh</Button>
           </Group>
           <Group align="flex-end">
             <Select
@@ -138,54 +163,31 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
 
       <BackupUploadModal
         opened={uploadOpened}
-        loading={loading}
+        loading={isLoading}
         onClose={() => setUploadOpened(false)}
-        onUpload={(kind, file) =>
-          runAction(async () => {
-            await uploadMutation.mutateAsync({ kind, file });
-            setUploadOpened(false);
-          }, 'Backup uploaded')
-        }
+        onUpload={handleUpload}
       />
       <BackupEditModal
         opened={editingFile !== null}
         file={editingFile}
-        loading={loading}
+        loading={isLoading}
         onClose={() => setEditingFile(null)}
-        onSave={(filename, note) =>
-          editingFile &&
-          runAction(async () => {
-            await updateMutation.mutateAsync({ file: editingFile, filename, note });
-            setEditingFile(null);
-          }, 'Backup updated')
-        }
+        onSave={handleSaveEdit}
       />
       <DeleteBackupModal
         opened={deletingFile !== null}
         file={deletingFile}
-        loading={loading}
+        loading={isLoading}
         onClose={() => setDeletingFile(null)}
-        onConfirm={() =>
-          deletingFile &&
-          runAction(async () => {
-            await deleteMutation.mutateAsync(deletingFile);
-            setDeletingFile(null);
-          }, 'Backup deleted')
-        }
+        onConfirm={handleDeleteConfirm}
       />
       <RestoreModal
         opened={restoringFile !== null}
         kind={restoringFile?.kind ?? 'mysql'}
         filename={restoringFile?.filename ?? null}
-        loading={loading}
+        loading={isLoading}
         onClose={() => setRestoringFile(null)}
-        onConfirm={() =>
-          restoringFile &&
-          runAction(async () => {
-            await restoreMutation.mutateAsync(restoringFile);
-            setRestoringFile(null);
-          }, 'Restore completed')
-        }
+        onConfirm={handleRestoreConfirm}
       />
     </>
   );

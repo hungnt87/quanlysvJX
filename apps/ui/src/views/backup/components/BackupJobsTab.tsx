@@ -1,7 +1,8 @@
 import { Badge, Button, Group, Table, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
-import { api } from '@/services/client';
+import { useEffect, useCallback } from 'react';
+import { backupService } from '@/services/backupService';
+import { backupKeys } from '@/hooks/useBackups';
 
 type Props = {
   onError: (message: string) => void;
@@ -9,22 +10,29 @@ type Props = {
 
 export function BackupJobsTab({ onError }: Props) {
   const jobsQuery = useQuery({
-    queryKey: ['backupJobs'],
-    queryFn: api.jobs,
+    queryKey: backupKeys.jobs(),
+    queryFn: backupService.getJobs,
     refetchInterval: (query) => (query.state.data?.some((job) => job.status === 'running') ? 5000 : false)
   });
   const jobs = jobsQuery.data ?? [];
 
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
+
   useEffect(() => {
     if (jobsQuery.isError) {
-      onError(jobsQuery.error instanceof Error ? jobsQuery.error.message : 'Unable to load jobs');
+      onErrorRef.current(jobsQuery.error instanceof Error ? jobsQuery.error.message : 'Unable to load jobs');
     }
-  }, [jobsQuery.error, jobsQuery.isError, onError]);
+  }, [jobsQuery.error, jobsQuery.isError]);
+
+  const handleRefresh = useCallback(() => jobsQuery.refetch(), [jobsQuery]);
 
   return (
     <>
       <Group justify="flex-end" mb="sm">
-        <Button variant="default" loading={jobsQuery.isFetching} onClick={() => jobsQuery.refetch()}>Refresh</Button>
+        <Button variant="default" loading={jobsQuery.isFetching} onClick={handleRefresh}>Refresh</Button>
       </Group>
       <Table striped highlightOnHover withTableBorder>
         <Table.Thead>
@@ -59,6 +67,8 @@ export function BackupJobsTab({ onError }: Props) {
     </>
   );
 }
+
+import { useRef } from 'react';
 
 function formatDate(value: string) {
   return new Date(value).toLocaleString();

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useTransition, useRef, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Badge,
   Button,
@@ -14,8 +14,9 @@ import {
   TextInput,
   Title
 } from '@mantine/core';
-import { api } from '@/services/client';
 import type { GameVersion } from '@/services/types';
+import { useVersions, versionKeys } from '@/hooks/useVersions';
+import { versionService } from '@/services/versionService';
 import { BrowseFolderModal } from './BrowseFolderModal';
 
 type Props = {
@@ -38,45 +39,46 @@ export function VersionManager({ onSuccess, onError }: Props) {
   const [renameName, setRenameName] = useState('');
   const [renameDisplayName, setRenameDisplayName] = useState('');
   const [browsingVersion, setBrowsingVersion] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  const versionsQuery = useQuery({
-    queryKey: ['versions'],
-    queryFn: api.versions
-  });
+  const {
+    versionsData,
+    selectVersion,
+    deleteVersion,
+    renameVersion,
+    isLoading
+  } = useVersions();
 
-  const { versions = [] } = versionsQuery.data ?? { versions: [] };
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
+
+  const { versions = [] } = versionsData ?? { versions: [] };
   const uploadNameTrimmed = uploadName.trim();
   const uploadNameExists = versions.some((version) => version.name === uploadNameTrimmed);
   const uploadDisabled = !uploadNameTrimmed || !uploadFile || uploadNameExists;
 
-  const selectMutation = useMutation({
-    mutationFn: api.selectVersion,
-    onSuccess: async (res) => {
-      onSuccess(`Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`);
-      setBrowsingVersion(null);
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
-    },
-    onError: (error) => onError(error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản')
-  });
-
   const cloneMutation = useMutation({
-    mutationFn: api.cloneVersion,
+    mutationFn: versionService.cloneVersion,
     onSuccess: async () => {
-      onSuccess('Clone thành công phiên bản game từ GitHub');
+      onSuccessRef.current('Clone thành công phiên bản game từ GitHub');
       setGitUrl('');
       setGitBranch('main');
       setCustomName('');
       setCloneModalOpened(false);
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
+      queryClient.invalidateQueries({ queryKey: versionKeys.all });
     },
-    onError: (error) => onError(error instanceof Error ? error.message : 'Git clone thất bại')
+    onError: (error) => onErrorRef.current(error instanceof Error ? error.message : 'Git clone thất bại')
   });
 
   const uploadMutation = useMutation({
     mutationFn: ({ name, file }: { name: string; file: File }) => {
       setUploadStatus('uploading');
       setUploadProgress(0);
-      return api.uploadVersionWithProgress({
+      return versionService.uploadVersionWithProgress({
         name,
         file,
         onProgress: (progress) => {
@@ -88,47 +90,47 @@ export function VersionManager({ onSuccess, onError }: Props) {
       });
     },
     onSuccess: async () => {
-      onSuccess('Upload và giải nén phiên bản game thành công');
+      onSuccessRef.current('Upload và giải nén phiên bản game thành công');
       setUploadName('');
       setUploadFile(null);
       setUploadProgress(0);
       setUploadStatus('idle');
       setUploadModalOpened(false);
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
+      queryClient.invalidateQueries({ queryKey: versionKeys.all });
     },
     onError: (error) => {
       setUploadStatus('idle');
-      onError(error instanceof Error ? error.message : 'Upload hoặc giải nén thất bại');
+      onErrorRef.current(error instanceof Error ? error.message : 'Upload hoặc giải nén thất bại');
     }
   });
 
-  const renameMutation = useMutation({
-    mutationFn: ({ currentName, name, displayName }: { currentName: string; name: string; displayName: string }) =>
-      api.renameVersion(currentName, { name, displayName }),
-    onSuccess: async () => {
-      onSuccess('Đã đổi tên phiên bản game thành công');
-      setRenamingVersion(null);
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
-    },
-    onError: (error) => onError(error instanceof Error ? error.message : 'Đổi tên phiên bản thất bại')
-  });
+  const handleActivateVersion = useCallback((name: string) => {
+    selectVersion({ name })
+      .then((res) => {
+        onSuccessRef.current(`Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`);
+        setBrowsingVersion(null);
+      })
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'));
+  }, [selectVersion]);
 
-  const deleteMutation = useMutation({
-    mutationFn: api.deleteVersion,
-    onSuccess: async () => {
-      onSuccess('Đã xóa phiên bản game thành công');
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
-    },
-    onError: (error) => onError(error instanceof Error ? error.message : 'Xóa phiên bản thất bại')
-  });
+  const handleSelectSubPath = useCallback((subPath: string) => {
+    if (browsingVersion) {
+      selectVersion({ name: browsingVersion, subPath })
+        .then((res) => {
+          onSuccessRef.current(`Đã kích hoạt phiên bản: ${res.activeVersion} (${res.serverPath})`);
+          setBrowsingVersion(null);
+        })
+        .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Không thể kích hoạt phiên bản'));
+    }
+  }, [browsingVersion, selectVersion]);
 
-  const handleGitClone = () => {
+  const handleGitClone = useCallback(() => {
     if (!gitUrl) {
-      onError('Vui lòng điền URL GitHub');
+      onErrorRef.current('Vui lòng điền URL GitHub');
       return;
     }
     if (!customName) {
-      onError('Vui lòng điền tên phiên bản lưu trữ');
+      onErrorRef.current('Vui lòng điền tên phiên bản lưu trữ');
       return;
     }
     cloneMutation.mutate({
@@ -136,42 +138,53 @@ export function VersionManager({ onSuccess, onError }: Props) {
       url: gitUrl,
       branch: gitBranch
     });
-  };
+  }, [gitUrl, customName, gitBranch, cloneMutation]);
 
-  const handleUpload = () => {
+  const handleUpload = useCallback(() => {
     if (!uploadNameTrimmed) {
-      onError('Vui lòng điền tên phiên bản');
+      onErrorRef.current('Vui lòng điền tên phiên bản');
       return;
     }
     if (!uploadFile) {
-      onError('Vui lòng chọn file game');
+      onErrorRef.current('Vui lòng chọn file game');
       return;
     }
     if (uploadNameExists) {
-      onError('Tên phiên bản đã tồn tại');
+      onErrorRef.current('Tên phiên bản đã tồn tại');
       return;
     }
     uploadMutation.mutate({ name: uploadNameTrimmed, file: uploadFile });
-  };
+  }, [uploadNameTrimmed, uploadFile, uploadNameExists, uploadMutation]);
 
-  const openRenameModal = (version: GameVersion) => {
+  const openRenameModal = useCallback((version: GameVersion) => {
     setRenamingVersion(version);
     setRenameName(version.name);
     setRenameDisplayName(version.displayName);
-  };
+  }, []);
 
-  const handleRename = () => {
+  const handleRename = useCallback(() => {
     if (!renamingVersion) return;
-    renameMutation.mutate({ currentName: renamingVersion.name, name: renameName.trim(), displayName: renameDisplayName.trim() });
-  };
+    renameVersion({ currentName: renamingVersion.name, payload: { name: renameName.trim(), displayName: renameDisplayName.trim() } })
+      .then(() => {
+        onSuccessRef.current('Đã đổi tên phiên bản game thành công');
+        setRenamingVersion(null);
+      })
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Đổi tên phiên bản thất bại'));
+  }, [renamingVersion, renameName, renameDisplayName, renameVersion]);
 
-  const handleSelectSubPath = (subPath: string) => {
-    if (browsingVersion) {
-      selectMutation.mutate({ name: browsingVersion, subPath });
-    }
-  };
+  const handleDeleteVersion = useCallback((name: string) => {
+    deleteVersion(name)
+      .then(() => onSuccessRef.current('Đã xóa phiên bản game thành công'))
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Xóa phiên bản thất bại'));
+  }, [deleteVersion]);
 
-  const loading = selectMutation.isPending || cloneMutation.isPending || uploadMutation.isPending || deleteMutation.isPending || renameMutation.isPending;
+  const handleBrowseFolder = useCallback((name: string) => {
+    startTransition(() => {
+      setBrowsingVersion(name);
+    });
+  }, []);
+
+  const loading = isLoading || cloneMutation.isPending || uploadMutation.isPending;
 
   return (
     <Card withBorder padding="md" radius="md">
@@ -236,7 +249,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
                         variant="filled"
                         color="green"
                         disabled={ver.isActive || loading}
-                        onClick={() => selectMutation.mutate({ name: ver.name })}
+                        onClick={() => handleActivateVersion(ver.name)}
                       >
                         Sử dụng bản này
                       </Button>
@@ -245,7 +258,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
                         variant="outline"
                         color="blue"
                         disabled={loading}
-                        onClick={() => setBrowsingVersion(ver.name)}
+                        onClick={() => handleBrowseFolder(ver.name)}
                       >
                         Duyệt thư mục
                       </Button>
@@ -262,7 +275,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
                         variant="light"
                         color="red"
                         disabled={ver.isActive || loading}
-                        onClick={() => deleteMutation.mutate(ver.name)}
+                        onClick={() => handleDeleteVersion(ver.name)}
                       >
                         Xóa
                       </Button>
@@ -378,7 +391,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
             <Button variant="default" onClick={() => setRenamingVersion(null)}>
               Hủy
             </Button>
-            <Button onClick={handleRename} loading={renameMutation.isPending} disabled={!renameName.trim() || !renameDisplayName.trim()}>
+            <Button onClick={handleRename} loading={loading} disabled={!renameName.trim() || !renameDisplayName.trim()}>
               Lưu
             </Button>
           </Group>
@@ -390,7 +403,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
         onClose={() => setBrowsingVersion(null)}
         versionName={browsingVersion || ''}
         onSelectPath={handleSelectSubPath}
-        isSelecting={selectMutation.isPending}
+        isSelecting={loading}
       />
     </Card>
   );

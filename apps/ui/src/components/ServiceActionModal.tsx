@@ -1,6 +1,6 @@
 import { Button, Group, Modal, Text, Box, ScrollArea, Loader } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
-import { api } from '@/services/client';
+import { serviceService } from '@/services/serviceService';
 
 type Props = {
   opened: boolean;
@@ -16,13 +16,11 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
   const [logs, setLogs] = useState('');
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
-  // Lưu onComplete vào ref để tránh thay đổi tham chiếu làm reset EventSource
   const onCompleteRef = useRef(onComplete);
   useEffect(() => {
     onCompleteRef.current = onComplete;
   }, [onComplete]);
 
-  // Lắng nghe log realtime khi đang loading hành động
   useEffect(() => {
     if (!loading || !service || !opened) {
       setLogs('');
@@ -35,10 +33,9 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
 
     setLogs(initialMsg);
     
-    // Nếu là chạy dịch vụ (start), ta lắng nghe trực tiếp từ api.startStreamUrl(service) để xem tiến trình docker compose up
     const source = action === 'start' 
-      ? new EventSource(api.startStreamUrl(service))
-      : new EventSource(api.logStreamUrl(service, 100));
+      ? new EventSource(serviceService.startStreamUrl(service))
+      : new EventSource(serviceService.logStreamUrl(service, 100));
 
     const appendLog = (event: MessageEvent<string>) => {
       let chunk = event.data;
@@ -52,7 +49,6 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
 
     const handleClose = () => {
       if (action === 'start' && onCompleteRef.current) {
-        // Tự động kết thúc quá trình chạy và reload UI
         setTimeout(onCompleteRef.current, 1500);
       }
     };
@@ -67,7 +63,6 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
     source.addEventListener('close', handleClose);
     source.addEventListener('error', handleError);
     
-    // Đăng ký trực tiếp sự kiện error/close mặc định của EventSource
     source.onerror = () => {
       if (action === 'start' && onCompleteRef.current) {
         onCompleteRef.current();
@@ -79,7 +74,6 @@ export function ServiceActionModal({ opened, service, action, loading, onClose, 
     };
   }, [loading, service, opened, action]);
 
-  // Cuộn tự động xuống cuối khi có log mới
   useEffect(() => {
     if (viewportRef.current) {
       viewportRef.current.scrollTop = viewportRef.current.scrollHeight;

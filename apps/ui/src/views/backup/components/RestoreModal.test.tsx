@@ -1,7 +1,7 @@
 import { MantineProvider } from '@mantine/core';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
-import { RestoreModal } from '@/features/backup/components/RestoreModal';
+import { RestoreModal } from './RestoreModal';
 
 function renderModal() {
   const onConfirm = vi.fn();

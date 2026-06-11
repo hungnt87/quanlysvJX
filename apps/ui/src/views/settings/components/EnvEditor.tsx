@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { Button, Card, Group, Stack, Text, Textarea, Title } from '@mantine/core';
-import { api } from '@/services/client';
+import { useEnv } from '@/hooks/useEnv';
+import { useQueryClient } from '@tanstack/react-query';
+import { versionKeys } from '@/hooks/useVersions';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -12,26 +13,29 @@ export function EnvEditor({ onSuccess, onError }: Props) {
   const queryClient = useQueryClient();
   const [content, setContent] = useState('');
 
-  const envQuery = useQuery({
-    queryKey: ['env'],
-    queryFn: api.env
-  });
+  const { envData, isLoading, saveEnv } = useEnv();
+
+  const onSuccessRef = useRef(onSuccess);
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onSuccessRef.current = onSuccess;
+    onErrorRef.current = onError;
+  }, [onSuccess, onError]);
 
   useEffect(() => {
-    if (envQuery.data) {
-      setContent(envQuery.data.content);
+    if (envData) {
+      setContent(envData.content);
     }
-  }, [envQuery.data]);
+  }, [envData]);
 
-  const saveMutation = useMutation({
-    mutationFn: api.saveEnv,
-    onSuccess: async () => {
-      onSuccess('Lưu cấu hình file .env thành công');
-      await queryClient.invalidateQueries({ queryKey: ['env'] });
-      await queryClient.invalidateQueries({ queryKey: ['versions'] });
-    },
-    onError: (error) => onError(error instanceof Error ? error.message : 'Lưu file cấu hình thất bại')
-  });
+  const handleSave = useCallback(() => {
+    saveEnv(content)
+      .then(() => {
+        onSuccessRef.current('Lưu cấu hình file .env thành công');
+        queryClient.invalidateQueries({ queryKey: versionKeys.all });
+      })
+      .catch((error) => onErrorRef.current(error instanceof Error ? error.message : 'Lưu file cấu hình thất bại'));
+  }, [content, saveEnv, queryClient]);
 
   return (
     <Card withBorder padding="md" radius="md">
@@ -52,16 +56,9 @@ export function EnvEditor({ onSuccess, onError }: Props) {
 
         <Group justify="flex-end">
           <Button
-            variant="default"
-            disabled={envQuery.isFetching}
-            onClick={() => envQuery.refetch()}
-          >
-            Tải lại
-          </Button>
-          <Button
             color="blue"
-            loading={saveMutation.isPending}
-            onClick={() => saveMutation.mutate(content)}
+            loading={isLoading}
+            onClick={handleSave}
           >
             Lưu thay đổi
           </Button>

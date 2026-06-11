@@ -1,7 +1,8 @@
 import { Button, Group, NumberInput, Paper, Select, Stack, Switch, Text, Box, ScrollArea } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
-import { api } from '@/services/client';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { serviceService } from '@/services/serviceService';
+import { serviceKeys } from '@/hooks/useServices';
 
 type Props = {
   services: string[];
@@ -12,7 +13,6 @@ type Props = {
 
 const MAX_LOG_LINES = 5000;
 
-// Bảng màu cho từng service
 const SERVICE_COLORS: Record<string, string> = {
   goddess: '#e040fb',       // Tím
   bishop: '#448aff',        // Xanh dương
@@ -37,10 +37,15 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   const activeService = selected || 'all';
 
   const logsQuery = useQuery({
-    queryKey: ['logs', activeService, tail],
-    queryFn: () => api.logs(activeService, tail),
+    queryKey: serviceKeys.logs(activeService, tail),
+    queryFn: () => serviceService.getLogs(activeService, tail),
     retry: false
   });
+
+  const onErrorRef = useRef(onError);
+  useEffect(() => {
+    onErrorRef.current = onError;
+  }, [onError]);
 
   useEffect(() => {
     setStreamReady(false);
@@ -48,7 +53,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
   useEffect(() => {
     if (logsQuery.isError) {
-      onError(logsQuery.error instanceof Error ? logsQuery.error.message : 'Unable to load logs');
+      onErrorRef.current(logsQuery.error instanceof Error ? logsQuery.error.message : 'Unable to load logs');
       setStreamReady(true);
       return;
     }
@@ -58,12 +63,12 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
       shouldFollowRef.current = true;
       setStreamReady(true);
     }
-  }, [logsQuery.data, logsQuery.error, logsQuery.isError, onError]);
+  }, [logsQuery.data, logsQuery.error, logsQuery.isError]);
 
   useEffect(() => {
     if (!autoFollow || !streamReady) return undefined;
 
-    const source = new EventSource(api.logStreamUrl(activeService, 0));
+    const source = new EventSource(serviceService.logStreamUrl(activeService, 0));
     const appendLog = (event: MessageEvent<string>) => {
       setLogs((current) => limitLogLines(`${current}${parseLogChunk(event.data)}`));
     };
@@ -73,15 +78,13 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
     return () => {
       source.close();
     };
-  }, [autoFollow, activeService, streamReady, tail]);
+  }, [autoFollow, activeService, streamReady]);
 
-  // Reset autoFollow khi đổi service
   useEffect(() => {
     setAutoFollow(true);
     shouldFollowRef.current = true;
   }, [activeService]);
 
-  // Tự động cuộn xuống cuối
   useEffect(() => {
     if (!autoFollow || !shouldFollowRef.current) return;
     
@@ -94,14 +97,13 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
     const handle = requestAnimationFrame(() => {
       scrollToBottomFn();
-      // setTimeout dự phòng để chắc chắn DOM đã render xong
       setTimeout(scrollToBottomFn, 50);
     });
 
     return () => cancelAnimationFrame(handle);
   }, [autoFollow, logs]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     const viewport = viewportRef.current;
     if (viewport) {
       viewport.scrollTop = viewport.scrollHeight;
@@ -109,34 +111,44 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
       shouldFollowRef.current = true;
       setShowScrollBottomBtn(false);
     }
-  };
+  }, []);
 
-  function handleScroll() {
+  const handleScroll = useCallback(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
 
     const distanceFromBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
     setShowScrollBottomBtn(distanceFromBottom > 150);
     shouldFollowRef.current = distanceFromBottom < 24;
-  }
+  }, []);
 
-  // Hàm render từng dòng log có màu sắc
-  const renderLogLines = () => {
-    const stripAnsi = (str: string) => 
-      // eslint-disable-next-line no-control-regex
-      str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+  const cleanLogs = useCallback((str: string) => {
+    // eslint-disable-next-line no-control-regex
+    const stripped = str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, '');
+    const lines = stripped.split('\n');
+    const processedLines = lines.map((line) => {
+      const parts = line.split('\r');
+      return parts[parts.length - 1];
+    });
+    return processedLines.join('\n');
+  }, []);
 
-    const formatTimestamp = (tsStr: string) => {
-      try {
-        const date = new Date(tsStr);
-        if (isNaN(date.getTime())) return `[${tsStr.substring(11, 19)}]`;
-        const pad = (n: number) => String(n).padStart(2, '0');
-        return `[${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}]`;
-      } catch {
-        return `[${tsStr.substring(11, 19)}]`;
-      }
-    };
+  const stripAnsi = useCallback((str: string) => 
+    // eslint-disable-next-line no-control-regex
+    str.replace(/[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g, ''), []);
 
+  const formatTimestamp = useCallback((tsStr: string) => {
+    try {
+      const date = new Date(tsStr);
+      if (isNaN(date.getTime())) return `[${tsStr.substring(11, 19)}]`;
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `[${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}]`;
+    } catch {
+      return `[${tsStr.substring(11, 19)}]`;
+    }
+  }, []);
+
+  const logLines = useMemo(() => {
     const lines = logs.replace(/\r/g, '').split('\n');
     return lines.map((line, index) => {
       if (!line.trim() && index === lines.length - 1) return null;
@@ -152,7 +164,6 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
         logContent = match[2];
       }
       
-      // Bóc tách timestamp từ logContent
       const tsMatch = logContent.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z)\s*(.*)$/);
       let ts: string | null = null;
       let actualContent = logContent;
@@ -162,8 +173,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
         actualContent = tsMatch[2] ?? '';
       }
 
-      // Xác định màu sắc
-      let color = '#4af626'; // mặc định
+      let color = '#4af626';
       if (activeService !== 'all') {
         const matchedService = Object.keys(SERVICE_COLORS).find(
           (s) => activeService.toLowerCase().includes(s)
@@ -188,13 +198,24 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
         </div>
       );
     });
-  };
+  }, [logs, activeService, showTimestamps, formatTimestamp, stripAnsi]);
 
-  // Chuẩn bị dữ liệu cho Select (bao gồm lựa chọn "Tất cả")
-  const selectData = [
+  const selectData = useMemo(() => [
     { value: 'all', label: 'Tất cả các dịch vụ' },
     ...services.map((name) => ({ value: name, label: name })),
-  ];
+  ], [services]);
+
+  const handleSelectChange = useCallback((value: string | null) => {
+    onSelect(value === 'all' ? 'all' : value);
+  }, [onSelect]);
+
+  const handleTailChange = useCallback((value: string | number) => {
+    setTail(typeof value === 'number' ? value : Number(value) || 300);
+  }, []);
+
+  const handleClear = useCallback(() => setLogs(''), []);
+  const handleSelectAll = useCallback(() => onSelect('all'), [onSelect]);
+  const handleRefresh = useCallback(() => logsQuery.refetch(), [logsQuery]);
 
   return (
     <Paper withBorder p="md">
@@ -222,25 +243,24 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
             label="Service"
             data={selectData}
             value={activeService}
-            onChange={(value) => onSelect(value === 'all' ? 'all' : value)}
+            onChange={handleSelectChange}
           />
           <NumberInput
             label="Tail"
             min={50}
             max={2000}
             value={tail}
-            onChange={(value) => setTail(typeof value === 'number' ? value : Number(value) || 300)}
+            onChange={handleTailChange}
           />
         </Group>
         <Group justify="space-between">
           <Group gap="xs">
-            <Button variant="default" onClick={() => setLogs('')}>Clear</Button>
-            <Button variant="light" onClick={() => onSelect('all')}>Tất cả</Button>
+            <Button variant="default" onClick={handleClear}>Clear</Button>
+            <Button variant="light" onClick={handleSelectAll}>Tất cả</Button>
           </Group>
-          <Button loading={logsQuery.isFetching} onClick={() => logsQuery.refetch()}>Refresh logs</Button>
+          <Button loading={logsQuery.isFetching} onClick={handleRefresh}>Refresh logs</Button>
         </Group>
         
-        {/* Custom Terminal View wrapper for floating button */}
         <Box style={{ position: 'relative' }}>
           <ScrollArea
             viewportRef={viewportRef}
@@ -264,7 +284,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
                 wordBreak: 'break-all',
               }}
             >
-              {renderLogLines()}
+              {logLines}
             </Box>
           </ScrollArea>
 
