@@ -38,4 +38,16 @@ describe('loadConfig MSSQL settings', () => {
       trustServerCertificate: true
     });
   });
+
+  it('uses JX_MSSQL_IP as the manager MSSQL host when MSSQL_HOST is not set', () => {
+    const config = loadConfig({ MANAGER_PROJECT_ROOT: '/repo', JX_MSSQL_IP: '10.0.0.8' });
+
+    expect(config.mssql.host).toBe('10.0.0.8');
+  });
+
+  it('treats legacy auto MSSQL host values as localhost', () => {
+    const config = loadConfig({ MANAGER_PROJECT_ROOT: '/repo', JX_MSSQL_IP: 'auto' });
+
+    expect(config.mssql.host).toBe('localhost');
+  });
 });

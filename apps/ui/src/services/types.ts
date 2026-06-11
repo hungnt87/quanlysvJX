@@ -117,10 +117,17 @@ export type GameNetworkConfig = {
   mssqlIp: string;
 };
 
+export type ServerIpChoice = {
+  address: string;
+  interfaceName: string;
+  kind: 'host' | 'vpn';
+};
+
 export type SystemInfo = {
   serverTime: string;
   timezone: string;
   ipChoices: string[];
+  serverIpChoices?: ServerIpChoice[];
   serverIp: string;
   mysqlIp: string;
   mssqlIp: string;

@@ -26,10 +26,16 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
     }
   }, [data?.gameNetwork]);
 
-  const ipOptions = useMemo(
-    () => (data?.ipChoices ?? []).map((ip) => ({ value: ip, label: ip })),
-    [data?.ipChoices]
-  );
+  const ipOptions = useMemo(() => {
+    if (data?.serverIpChoices?.length) {
+      return data.serverIpChoices.map((choice) => ({
+        value: choice.address,
+        label: `${choice.interfaceName} - ${choice.address} (${choice.kind === 'vpn' ? 'VPN' : 'Host'})`,
+      }));
+    }
+
+    return (data?.ipChoices ?? []).map((ip) => ({ value: ip, label: ip }));
+  }, [data?.ipChoices, data?.serverIpChoices]);
 
   const setField = (field: keyof GameNetworkConfig, value: string | null) => {
     if (!value) {

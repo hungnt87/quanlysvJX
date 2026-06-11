@@ -55,6 +55,9 @@ describe('system routes', () => {
       runningCoreServices: ['jxserver']
     });
     expect(response.json().data.ipChoices).toEqual(['192.168.1.20']);
+    expect(response.json().data.serverIpChoices).toEqual([
+      { address: '192.168.1.20', interfaceName: 'eth0', kind: 'host' }
+    ]);
   });
 
   it('saves host JX IP and free IPv4 network values while rejecting auto', async () => {
@@ -85,5 +88,7 @@ describe('system routes', () => {
     expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_MYSQL_IP=10.0.0.8');
     expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_PAYSYS_IP=172.18.0.1');
     expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('JX_MSSQL_IP=8.8.8.8');
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).not.toContain('MSSQL_HOST=');
+    expect(response.json().data.message).toBe('Đã lưu cấu hình IP game vào .env. Restart dịch vụ để áp dụng.');
   });
 });

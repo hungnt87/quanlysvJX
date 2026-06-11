@@ -36,7 +36,7 @@ export function loadConfig(env = process.env): ManagerConfig {
     backupScheduleFile: path.resolve(projectRoot, env.BACKUP_SCHEDULE_FILE ?? path.join(backupRoot, 'backup-schedules.json')),
     schedulerEnabled: env.BACKUP_SCHEDULER_ENABLED === 'true',
     mssql: {
-      host: env.MSSQL_HOST ?? 'localhost',
+      host: normalizeMssqlHost(env.MSSQL_HOST ?? env.JX_MSSQL_IP),
       port: Number(env.MSSQL_PORT ?? '1433'),
       database: env.MSSQL_DATABASE ?? 'account_tong',
       user: env.MSSQL_USER ?? null,
@@ -45,4 +45,11 @@ export function loadConfig(env = process.env): ManagerConfig {
       trustServerCertificate: env.MSSQL_TRUST_SERVER_CERTIFICATE !== 'false'
     }
   };
+}
+
+function normalizeMssqlHost(value: string | undefined) {
+  if (!value || value === 'auto') {
+    return 'localhost';
+  }
+  return value;
 }

@@ -5,7 +5,7 @@ services:
     ports:
       - "3306:3306"
     environment:
-      MYSQL_ROOT_PASSWORD: "1234560123"
+      MYSQL_ROOT_PASSWORD: ${JX_MYSQL_ROOT_PASSWORD:-1234560123}
     command: --explicit_defaults_for_timestamp=1 --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     mem_limit: 1g
     volumes:
@@ -28,7 +28,7 @@ services:
     ports:
       - "1433:1433"
     environment:
-      SA_PASSWORD: "SAJx123456"
+      SA_PASSWORD: ${JX_MSSQL_SA_PASSWORD:-SAJx123456}
       ACCEPT_EULA: "Y"
       TZ: "Asia/Ho_Chi_Minh"
     volumes:
@@ -52,8 +52,8 @@ services:
     container_name: jxmssql-init
     restart: "no"
     environment:
-      SA_PASSWORD: "SAJx123456"
-      MSSQL_ACCOUNT_DATABASE: account_tong
+      SA_PASSWORD: ${JX_MSSQL_SA_PASSWORD:-SAJx123456}
+      MSSQL_ACCOUNT_DATABASE: ${JX_MSSQL_ACCOUNT_DATABASE:-account_tong}
     volumes:
       - ./mount/database/mssql/seed:/var/opt/mssql/seed:ro
       - /etc/localtime:/etc/localtime:ro

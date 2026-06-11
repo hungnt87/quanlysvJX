@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   buildSystemInfo,
+  getServerIpChoiceDetails,
   getServerIpChoices,
   normalizeGameNetworkConfig,
   validateGameNetworkPayload
@@ -38,7 +39,26 @@ describe('systemInfo domain', () => {
       }
     });
 
-    expect(choices).toEqual(['10.10.10.5', '100.65.85.5', '192.168.1.20', '192.168.192.47']);
+    expect(choices).toEqual(['192.168.1.20', '10.10.10.5', '100.65.85.5', '192.168.192.47']);
+  });
+
+  it('returns interface labels and sorts physical host IPs before VPN IPs', () => {
+    const choices = getServerIpChoiceDetails({
+      commandRunner: () => ({
+        stdout:
+          '2: ens33    inet 192.168.10.4/24 brd 192.168.10.255 scope global ens33\n' +
+          '3: docker0 inet 172.18.0.1/16 brd 172.18.255.255 scope global docker0\n' +
+          '4: tailscale0 inet 100.65.85.5/32 scope global tailscale0\n' +
+          '5: zt6jy4cyx3 inet 192.168.192.47/24 scope global zt6jy4cyx3\n',
+        exitCode: 0
+      })
+    });
+
+    expect(choices).toEqual([
+      { address: '192.168.10.4', interfaceName: 'ens33', kind: 'host' },
+      { address: '100.65.85.5', interfaceName: 'tailscale0', kind: 'vpn' },
+      { address: '192.168.192.47', interfaceName: 'zt6jy4cyx3', kind: 'vpn' }
+    ]);
   });
 
   it('builds host IPv4 choices and filters loopback, docker, and bridge interfaces', () => {
@@ -56,7 +76,7 @@ describe('systemInfo domain', () => {
       }
     });
 
-    expect(choices).toEqual(['10.10.10.5', '100.65.85.5', '192.168.1.20', '192.168.192.47']);
+    expect(choices).toEqual(['192.168.1.20', '10.10.10.5', '100.65.85.5', '192.168.192.47']);
   });
 
   it('replaces missing and legacy auto env values with safe defaults for the form', () => {
@@ -133,5 +153,8 @@ describe('systemInfo domain', () => {
       coreServicesRunning: true,
       runningCoreServices: ['jxserver']
     });
+    expect(info.serverIpChoices).toEqual([
+      { address: '192.168.1.20', interfaceName: 'host', kind: 'host' }
+    ]);
   });
 });

@@ -25,6 +25,63 @@ fi
 export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-mscoree,mshtml,winevulkan=d}"
 export WINEDEBUG="${WINEDEBUG:--vulkan,-ntoskrnl,-service,-ole,-ntdll,-sync}"
 
+update_ini_key() {
+    file="$1"
+    section="$2"
+    key="$3"
+    value="$4"
+    temp_update="/tmp/$(basename "$file").update"
+
+    awk -v target_section="$section" -v target_key="$key" -v replacement="$value" '
+        function trim(value) {
+            gsub(/^[[:space:]]+|[[:space:]]+$/, "", value)
+            return value
+        }
+        BEGIN {
+            active = 0
+            target_section = tolower(target_section)
+            target_key = tolower(target_key)
+        }
+        /^[[:space:]]*\[[^]]+\][[:space:]]*$/ {
+            section_name = $0
+            sub(/^[[:space:]]*\[/, "", section_name)
+            sub(/\][[:space:]]*$/, "", section_name)
+            active = (tolower(trim(section_name)) == target_section)
+        }
+        {
+            if (active) {
+                separator_index = index($0, "=")
+                if (separator_index > 0) {
+                    left = substr($0, 1, separator_index - 1)
+                    right = substr($0, separator_index + 1)
+                    key_name = tolower(trim(left))
+                    if (key_name == target_key && left !~ /^[[:space:]]*[;#]/) {
+                        match(right, /^[[:space:]]*/)
+                        print left "=" substr(right, RSTART, RLENGTH) replacement
+                        next
+                    }
+                }
+            }
+            print
+        }
+    ' "$file" > "$temp_update"
+    cat "$temp_update" > "$file"
+    rm -f "$temp_update"
+}
+
+update_database_key() {
+    encrypted_value="$1"
+    database_key="$2"
+    label="$3"
+
+    if [ -n "$encrypted_value" ] && [ "$encrypted_value" != "auto" ]; then
+        echo "-> Updating ${label} in database.ini"
+        update_ini_key "$TEMP_INI" "card" "$database_key" "$encrypted_value"
+        update_ini_key "$TEMP_INI" "account" "$database_key" "$encrypted_value"
+        UPDATED=1
+    fi
+}
+
 DATABASE_INI="/src/paysys/database.ini"
 if [ -f "$DATABASE_INI" ]; then
     echo "[S3Relay] Checking encrypted database settings..."
@@ -37,29 +94,10 @@ if [ -f "$DATABASE_INI" ]; then
     # Nếu là 'auto' hoặc rỗng, giữ nguyên giá trị sẵn có trong database.ini
     UPDATED=0
     
-    if [ -n "${JX_MSSQL_IP_ENCRYPTED:-}" ] && [ "$JX_MSSQL_IP_ENCRYPTED" != "auto" ]; then
-        echo "-> Updating Server IP in database.ini"
-        sed -i -E "s/^([[:space:]]*Server[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_IP_ENCRYPTED/g" "$TEMP_INI"
-        UPDATED=1
-    fi
-    
-    if [ -n "${JX_MSSQL_DB_ENCRYPTED:-}" ] && [ "$JX_MSSQL_DB_ENCRYPTED" != "auto" ]; then
-        echo "-> Updating Database Name in database.ini"
-        sed -i -E "s/^([[:space:]]*DataBase[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_DB_ENCRYPTED/g" "$TEMP_INI"
-        UPDATED=1
-    fi
-
-    if [ -n "${JX_MSSQL_USER_ENCRYPTED:-}" ] && [ "$JX_MSSQL_USER_ENCRYPTED" != "auto" ]; then
-        echo "-> Updating User in database.ini"
-        sed -i -E "s/^([[:space:]]*User[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_USER_ENCRYPTED/g" "$TEMP_INI"
-        UPDATED=1
-    fi
-
-    if [ -n "${JX_MSSQL_PASS_ENCRYPTED:-}" ] && [ "$JX_MSSQL_PASS_ENCRYPTED" != "auto" ]; then
-        echo "-> Updating PassWord in database.ini"
-        sed -i -E "s/^([[:space:]]*PassWord[[:space:]]*=[[:space:]]*).*/\1$JX_MSSQL_PASS_ENCRYPTED/g" "$TEMP_INI"
-        UPDATED=1
-    fi
+    update_database_key "${JX_MSSQL_IP_ENCRYPTED:-}" "Server" "Server IP"
+    update_database_key "${JX_MSSQL_DB_ENCRYPTED:-}" "DataBase" "Database Name"
+    update_database_key "${JX_MSSQL_USER_ENCRYPTED:-}" "User" "User"
+    update_database_key "${JX_MSSQL_PASS_ENCRYPTED:-}" "PassWord" "PassWord"
 
     # Chỉ ghi đè lại file gốc nếu có cập nhật
     if [ "$UPDATED" -eq 1 ]; then

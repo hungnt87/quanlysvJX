@@ -21,6 +21,7 @@ export type SystemInfo = {
   serverTime: string;
   timezone: string;
   ipChoices: string[];
+  serverIpChoices: ServerIpChoice[];
   serverIp: string;
   mysqlIp: string;
   mssqlIp: string;
@@ -34,6 +35,12 @@ export type HostIpCommandResult = {
   exitCode: number;
 };
 
+export type ServerIpChoice = {
+  address: string;
+  interfaceName: string;
+  kind: 'host' | 'vpn';
+};
+
 export type ServerIpChoiceOptions = {
   interfaces?: NodeJS.Dict<NetworkInterfaceInfo[]>;
   commandRunner?: () => HostIpCommandResult;
@@ -42,9 +49,14 @@ export type ServerIpChoiceOptions = {
 const coreServiceNames = new Set(['jxserver', 's3relay', 'bishop', 'goddess']);
 const loopbackIp = '127.0.0.1';
 const virtualInterfacePattern = /^(docker\d*|br-.+|veth.+|virbr\d*|lo)$/;
+const vpnInterfacePattern = /^(tailscale\d*|zt.+|zerotier.+|wg\d*|tun\d*|tap\d*|ppp\d*)$/i;
 const ipv4Pattern = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 export function getServerIpChoices(options: ServerIpChoiceOptions = {}) {
+  return getServerIpChoiceDetails(options).map((choice) => choice.address);
+}
+
+export function getServerIpChoiceDetails(options: ServerIpChoiceOptions = {}) {
   const hostNamespaceIps = getHostNamespaceIpChoices(options.commandRunner ?? runHostNamespaceIpCommand);
   if (hostNamespaceIps.length > 0) {
     return hostNamespaceIps;
@@ -55,18 +67,18 @@ export function getServerIpChoices(options: ServerIpChoiceOptions = {}) {
 }
 
 function getInterfaceIpChoices(interfaces: NodeJS.Dict<NetworkInterfaceInfo[]>) {
-  const ips = new Set<string>();
+  const choices = new Map<string, ServerIpChoice>();
   for (const [name, entries] of Object.entries(interfaces)) {
     if (isVirtualInterface(name)) {
       continue;
     }
     for (const entry of entries ?? []) {
       if (isIpv4Interface(entry)) {
-        ips.add(entry.address);
+        choices.set(entry.address, buildServerIpChoice(name, entry.address));
       }
     }
   }
-  return [...ips].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+  return sortServerIpChoices([...choices.values()]);
 }
 
 function getHostNamespaceIpChoices(commandRunner: () => HostIpCommandResult) {
@@ -91,7 +103,7 @@ function runHostNamespaceIpCommand(): HostIpCommandResult {
 }
 
 function parseIpAddrOutput(stdout: string) {
-  const ips = new Set<string>();
+  const choices = new Map<string, ServerIpChoice>();
   for (const line of stdout.split(/\r?\n/)) {
     const match = line.match(/^\d+:\s+([^\s]+)\s+inet\s+([^/\s]+)/);
     if (!match) {
@@ -101,9 +113,9 @@ function parseIpAddrOutput(stdout: string) {
     if (!interfaceName || !address || isVirtualInterface(interfaceName) || !isIpv4(address)) {
       continue;
     }
-    ips.add(address);
+    choices.set(address, buildServerIpChoice(interfaceName, address));
   }
-  return [...ips].sort((left, right) => left.localeCompare(right, undefined, { numeric: true }));
+  return sortServerIpChoices([...choices.values()]);
 }
 
 function safeNetworkInterfaces() {
@@ -149,11 +161,15 @@ export function saveGameNetworkConfig(envFilePath: string, config: GameNetworkCo
 export function buildSystemInfo(options: {
   envFilePath: string;
   ipChoices?: string[];
+  serverIpChoices?: ServerIpChoice[];
   coreServices?: CoreServiceState[];
   now?: Date;
   timezone?: string;
 }): SystemInfo {
-  const ipChoices = options.ipChoices ?? getServerIpChoices();
+  const serverIpChoices = options.serverIpChoices ?? (options.ipChoices
+    ? options.ipChoices.map((address) => buildServerIpChoice('host', address))
+    : getServerIpChoiceDetails());
+  const ipChoices = serverIpChoices.map((choice) => choice.address);
   const env = readEnvMap(options.envFilePath);
   const gameNetwork = normalizeGameNetworkConfig(env, ipChoices);
   const runningCoreServices = (options.coreServices ?? [])
@@ -164,6 +180,7 @@ export function buildSystemInfo(options: {
     serverTime: (options.now ?? new Date()).toISOString(),
     timezone: options.timezone ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
     ipChoices,
+    serverIpChoices,
     serverIp: gameNetwork.jxIp,
     mysqlIp: gameNetwork.mysqlIp,
     mssqlIp: gameNetwork.mssqlIp,
@@ -199,6 +216,36 @@ function isIpv4(value: string) {
 
 function isVirtualInterface(name: string) {
   return virtualInterfacePattern.test(name);
+}
+
+function isVpnInterface(name: string) {
+  return vpnInterfacePattern.test(name);
+}
+
+function buildServerIpChoice(interfaceName: string, address: string): ServerIpChoice {
+  return {
+    address,
+    interfaceName,
+    kind: isVpnInterface(interfaceName) ? 'vpn' : 'host'
+  };
+}
+
+function sortServerIpChoices(choices: ServerIpChoice[]) {
+  return [...choices].sort((left, right) => {
+    const kindCompare = getIpKindRank(left.kind) - getIpKindRank(right.kind);
+    if (kindCompare !== 0) {
+      return kindCompare;
+    }
+    const interfaceCompare = left.interfaceName.localeCompare(right.interfaceName, undefined, { numeric: true });
+    if (interfaceCompare !== 0) {
+      return interfaceCompare;
+    }
+    return left.address.localeCompare(right.address, undefined, { numeric: true });
+  });
+}
+
+function getIpKindRank(kind: ServerIpChoice['kind']) {
+  return kind === 'host' ? 0 : 1;
 }
 
 function isIpv4Interface(entry: NetworkInterfaceInfo) {

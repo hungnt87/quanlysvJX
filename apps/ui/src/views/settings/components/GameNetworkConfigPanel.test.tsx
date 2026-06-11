@@ -11,6 +11,7 @@ vi.mock('@/services/systemService', () => ({
       serverTime: '2026-06-11T08:00:00.000Z',
       timezone: 'Asia/Ho_Chi_Minh',
       ipChoices: ['192.168.1.20'],
+      serverIpChoices: [{ address: '192.168.1.20', interfaceName: 'eth0', kind: 'host' }],
       serverIp: '192.168.1.20',
       mysqlIp: '127.0.0.1',
       mssqlIp: '192.168.1.20',
@@ -57,7 +58,7 @@ describe('GameNetworkConfigPanel', () => {
     expect(await screen.findByText(/jxserver/)).toBeTruthy();
     expect(screen.queryByText('auto')).toBeNull();
     expect((screen.getAllByLabelText('Game server IP')[0] as HTMLInputElement).value).toBe(
-      '192.168.1.20'
+      'eth0 - 192.168.1.20 (Host)'
     );
     expect(screen.queryByText('127.0.0.1')).toBeNull();
 
