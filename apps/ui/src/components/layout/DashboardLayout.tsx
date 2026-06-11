@@ -2,14 +2,37 @@ import './Navbar.css';
 import { AppShell, Group, NavLink, Stack, Title, Burger, Tooltip, ActionIcon } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { IconSwords, IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
+import { useCallback, useState } from 'react';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { navigationConfig } from '@/configs/routes.config';
+
+const navbarCollapsedStorageKey = 'jx-manager-navbar-collapsed';
+
+function readDesktopNavbarOpened() {
+  try {
+    return window.localStorage.getItem(navbarCollapsedStorageKey) !== 'true';
+  } catch {
+    return true;
+  }
+}
 
 export default function DashboardLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileOpened, { toggle: toggleMobile }] = useDisclosure();
-  const [desktopOpened, { toggle: toggleDesktop }] = useDisclosure(true);
+  const [desktopOpened, setDesktopOpened] = useState(readDesktopNavbarOpened);
+
+  const toggleDesktop = useCallback(() => {
+    setDesktopOpened((current) => {
+      const next = !current;
+      try {
+        window.localStorage.setItem(navbarCollapsedStorageKey, String(!next));
+      } catch {
+        // Ignore storage failures and keep the in-memory toggle usable.
+      }
+      return next;
+    });
+  }, []);
 
   const getActiveKey = () => {
     const path = location.pathname;
@@ -62,6 +85,7 @@ export default function DashboardLayout() {
           >
             <ActionIcon
               className="navbarToggleBtn"
+              aria-label={desktopOpened ? 'Thu gọn thanh điều hướng' : 'Mở rộng thanh điều hướng'}
               onClick={toggleDesktop}
               visibleFrom="sm"
               size="lg"

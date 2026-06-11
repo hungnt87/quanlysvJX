@@ -4,6 +4,7 @@ import { renderWithProviders } from '@/utils/test/renderWithProviders';
 import Dashboard from './index';
 
 const mockUseServices = vi.fn();
+const mockUseVersions = vi.fn();
 
 vi.mock('@/hooks/useServices', () => ({
   useServices: (...args: unknown[]) => mockUseServices(...args),
@@ -11,6 +12,15 @@ vi.mock('@/hooks/useServices', () => ({
     all: ['services'] as const,
     lists: () => ['services', 'list'] as const,
     logs: (service: string, tail: number) => ['services', 'logs', service, { tail }] as const,
+  },
+}));
+
+vi.mock('@/hooks/useVersions', () => ({
+  useVersions: () => mockUseVersions(),
+  versionKeys: {
+    all: ['versions'] as const,
+    lists: () => ['versions', 'list'] as const,
+    browse: (name: string, path?: string) => ['versions', 'browse', name, { path }] as const,
   },
 }));
 
@@ -32,12 +42,43 @@ class MockEventSource {
 describe('Dashboard', () => {
   beforeEach(() => {
     vi.stubGlobal('EventSource', MockEventSource);
+    mockUseVersions.mockReturnValue({
+      versionsData: { activeVersion: 'mel', versions: [] },
+      isLoading: false,
+      selectVersion: vi.fn(),
+      deleteVersion: vi.fn(),
+      renameVersion: vi.fn(),
+    });
   });
 
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
     mockUseServices.mockReset();
+    mockUseVersions.mockReset();
+  });
+
+  it('shows a game version warning when versions load without an active version', async () => {
+    mockUseServices.mockReturnValue({
+      services: [],
+      isFetching: false,
+      error: null,
+      isError: false,
+      runAction: vi.fn(),
+      isActionLoading: false,
+    });
+    mockUseVersions.mockReturnValue({
+      versionsData: { activeVersion: null, versions: [] },
+      isLoading: false,
+      selectVersion: vi.fn(),
+      deleteVersion: vi.fn(),
+      renameVersion: vi.fn(),
+    });
+
+    renderWithProviders(<Dashboard />);
+
+    expect(await screen.findByText('Cảnh báo: Chưa có Phiên bản Game')).toBeTruthy();
+    expect(screen.getByText(/kích hoạt một phiên bản/)).toBeTruthy();
   });
 
   it('shows a game version warning when services cannot load because no version is active', async () => {
@@ -57,7 +98,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Cảnh báo: Chưa có Phiên bản Game')).toBeTruthy();
     expect(screen.getByText(/Vui lòng vào Quản lý phiên bản game/)).toBeTruthy();
     expect(screen.getByRole('link', { name: 'Mở quản lý phiên bản' }).getAttribute('href')).toBe(
-      '/settings'
+      '/settings/versions'
     );
   });
 });

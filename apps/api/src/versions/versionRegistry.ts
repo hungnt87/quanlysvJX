@@ -51,6 +51,10 @@ export type RenameVersionOptions = {
   name?: string;
 };
 
+export type DeleteVersionOptions = {
+  allowActive?: boolean;
+};
+
 export function getVersionsDir(projectRoot: string) {
   return path.join(projectRoot, 'apps', 'jx-services', 'versions');
 }
@@ -193,20 +197,25 @@ export function renameVersion(projectRoot: string, currentName: string, options:
   return renamed;
 }
 
-export function deleteVersionRecord(projectRoot: string, name: string) {
+export function deleteVersionRecord(projectRoot: string, name: string, options: DeleteVersionOptions = {}) {
   const versionName = normalizeVersionName(name);
   const registry = ensureVersionRegistry(projectRoot);
   if (!registry.versions.some((item) => item.name === versionName)) {
     throw new VersionNotFoundError(versionName);
   }
-  if (registry.activeVersion === versionName) {
+  const isActive = registry.activeVersion === versionName;
+  if (isActive && !options.allowActive) {
     throw new Error('Cannot delete active game version');
   }
   rmSync(path.join(getVersionsDir(projectRoot), versionName), { recursive: true, force: true });
   writeVersionRegistry(projectRoot, {
     ...registry,
+    activeVersion: isActive ? null : registry.activeVersion,
     versions: registry.versions.filter((item) => item.name !== versionName)
   });
+  if (isActive) {
+    updateEnvKey(path.join(projectRoot, '.env'), 'SERVER_PATH', '');
+  }
 }
 
 export function normalizeVersionName(name: string) {

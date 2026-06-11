@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import { BatchActionModal } from '@/components/BatchActionModal';
 import { ServiceActionModal } from '@/components/ServiceActionModal';
 import { useServices, serviceKeys } from '@/hooks/useServices';
+import { useVersions } from '@/hooks/useVersions';
 import { LogsPanel } from './components/LogsPanel';
 import { PrepareImagesModal } from './components/PrepareImagesModal';
 import { ServiceTable } from './components/ServiceTable';
@@ -18,6 +19,7 @@ export default function Dashboard() {
   } | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
   const { services, runAction, error, isError } = useServices(true); // polling status every 5 seconds
+  const { versionsData } = useVersions();
 
   const [prepareOpened, setPrepareOpened] = useState(false);
   const [servicesToPrepare, setServicesToPrepare] = useState<string[]>([]);
@@ -100,8 +102,10 @@ export default function Dashboard() {
     return acc;
   }, new Set<string>()).size;
   const serviceErrorMessage = error instanceof Error ? error.message : '';
+  const hasNoActiveVersion = versionsData !== undefined && versionsData.activeVersion === null;
   const hasMissingGameVersion =
-    isError && serviceErrorMessage.toLocaleLowerCase('vi-VN').includes('phiên bản game');
+    hasNoActiveVersion ||
+    (isError && serviceErrorMessage.toLocaleLowerCase('vi-VN').includes('phiên bản game'));
 
   return (
     <Stack gap="md">
@@ -122,7 +126,7 @@ export default function Dashboard() {
                 hoạt một phiên bản trước khi khởi chạy dịch vụ.
               </Text>
             </Stack>
-            <Button color="red" size="md" component={Link} to="/settings">
+            <Button color="red" size="md" component={Link} to="/settings/versions">
               Mở quản lý phiên bản
             </Button>
           </Group>

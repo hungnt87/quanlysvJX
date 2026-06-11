@@ -4,6 +4,8 @@ import { spawnSync } from 'node:child_process';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { ok } from '../api/envelope.js';
+import { CommandError, ValidationError } from '../api/errors.js';
+import { parseManagedServiceStatuses } from '../services/serviceStatus.js';
 import {
   DuplicateVersionError,
   InvalidVersionPathError,
@@ -17,6 +19,8 @@ import {
   renameVersion,
   selectVersion
 } from '../versions/versionRegistry.js';
+
+const coreGameServices = ['jxserver', 's3relay', 'bishop', 'goddess'] as const;
 
 const selectVersionSchema = z.object({
   name: z.string().regex(/^[A-Za-z0-9_-]{1,10}$/),
@@ -86,8 +90,7 @@ export async function registerVersionRoutes(app: FastifyInstance) {
       const registry = ensureVersionRegistry(projectRoot);
       assertVersionNameAvailable(projectRoot, registry, targetName);
       runCommand('git', ['clone', '--depth', '1', '-b', branch, url, targetDir]);
-      try { runCommand('chmod', ['-R', '777', targetDir]); } catch { void 0; }
-      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch { void 0; }
+      applyVersionFolderPermissions(targetDir);
       const hasServerDir = fs.existsSync(path.join(targetDir, 'server'));
       return ok(createVersionRecord(projectRoot, {
         name: targetName,
@@ -152,8 +155,7 @@ export async function registerVersionRoutes(app: FastifyInstance) {
       try { fs.chmodSync(targetDir, 0o777); } catch { void 0; }
       try { fs.chownSync(targetDir, 1000, 1000); } catch { void 0; }
       extractArchive(tempArchivePath, filename, targetDir);
-      try { runCommand('chmod', ['-R', '777', targetDir]); } catch { void 0; }
-      try { runCommand('chown', ['-R', '1000:1000', targetDir]); } catch { void 0; }
+      applyVersionFolderPermissions(targetDir);
       const hasServerDir = fs.existsSync(path.join(targetDir, 'server'));
       return ok(createVersionRecord(projectRoot, {
         name: targetName,
@@ -180,7 +182,11 @@ export async function registerVersionRoutes(app: FastifyInstance) {
     const name = normalizeVersionName((request.params as { name: string }).name);
 
     try {
-      deleteVersionRecord(projectRoot, name);
+      const registry = ensureVersionRegistry(projectRoot);
+      if (registry.activeVersion === name) {
+        await assertActiveVersionCanBeDeleted(app);
+      }
+      deleteVersionRecord(projectRoot, name, { allowActive: registry.activeVersion === name });
       return ok({ message: 'Version deleted successfully' });
     } catch (error) {
       throwVersionHttpError(app, error, 'Cannot delete version');
@@ -218,6 +224,24 @@ export async function registerVersionRoutes(app: FastifyInstance) {
   });
 }
 
+async function assertActiveVersionCanBeDeleted(app: FastifyInstance) {
+  const result = await app.deps.runCompose(['ps', '--all', '--format', 'json']);
+  if (result.exitCode !== 0) {
+    throw new CommandError('Unable to read Docker Compose services');
+  }
+
+  const runningServices = parseManagedServiceStatuses(result.stdout)
+    .filter((service) => coreGameServices.includes(service.name as (typeof coreGameServices)[number]))
+    .filter((service) => service.state === 'running')
+    .map((service) => service.name);
+
+  if (runningServices.length > 0) {
+    throw new ValidationError(
+      `Không thể xóa phiên bản game đang kích hoạt khi các dịch vụ đang chạy: ${runningServices.join(', ')}`
+    );
+  }
+}
+
 function extractArchive(tempArchivePath: string, filename: string, targetDir: string) {
   const ext = path.extname(filename).toLowerCase();
   const isZip = ext === '.zip';
@@ -240,6 +264,11 @@ function runCommand(command: string, args: string[]) {
   if (result.status !== 0) {
     throw new Error((result.stderr || result.stdout || `${command} failed`).trim());
   }
+}
+
+function applyVersionFolderPermissions(targetDir: string) {
+  runCommand('chmod', ['-R', '777', targetDir]);
+  runCommand('chown', ['-R', '1000:1000', targetDir]);
 }
 
 function throwVersionHttpError(app: FastifyInstance, error: unknown, fallback: string): never {

@@ -42,7 +42,7 @@ export const routes: RouteConfig[] = [
   },
   {
     key: 'settings',
-    path: '/settings',
+    path: '/settings/*',
     component: lazy(() => import('@/views/settings')),
     title: 'Cài đặt',
     icon: IconSettings,

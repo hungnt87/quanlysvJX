@@ -1,10 +1,10 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { buildApp } from '../app.js';
 import type { ManagerConfig } from '../config.js';
-import { createVersionRecord, ensureVersionRegistry, getVersionsDir } from '../versions/versionRegistry.js';
+import { createVersionRecord, ensureVersionRegistry, getVersionsDir, readVersionRegistry } from '../versions/versionRegistry.js';
 
 let root: string;
 
@@ -80,5 +80,49 @@ describe('version routes', () => {
 
     expect(response.statusCode).toBe(409);
     expect(response.json().error).toContain('Tên phiên bản đã tồn tại');
+  });
+
+  it('deletes the active version when core game services are not running', async () => {
+    ensureVersionRegistry(root);
+    const app = await buildApp({
+      config: testConfig(root),
+      runCompose: async () => ({
+        stdout: JSON.stringify([
+          { Service: 'jxserver', Name: 'jxserver', State: 'exited' },
+          { Service: 's3relay', Name: 's3relay', State: 'not created' },
+          { Service: 'bishop', Name: 'bishop', State: 'created' },
+          { Service: 'goddess', Name: 'goddess', State: 'paused' },
+          { Service: 'paysys', Name: 'paysys', State: 'running' }
+        ]),
+        stderr: '',
+        exitCode: 0
+      })
+    });
+
+    const response = await app.inject({ method: 'DELETE', url: '/api/versions/mel' });
+
+    expect(response.statusCode).toBe(200);
+    expect(existsSync(path.join(getVersionsDir(root), 'mel'))).toBe(false);
+    expect(readVersionRegistry(root)).toMatchObject({ activeVersion: null, versions: [] });
+    expect(readFileSync(path.join(root, '.env'), 'utf8')).toContain('SERVER_PATH=');
+  });
+
+  it('rejects deleting the active version while a core game service is running', async () => {
+    ensureVersionRegistry(root);
+    const app = await buildApp({
+      config: testConfig(root),
+      runCompose: async () => ({
+        stdout: JSON.stringify([{ Service: 'jxserver', Name: 'jxserver', State: 'running' }]),
+        stderr: '',
+        exitCode: 0
+      })
+    });
+
+    const response = await app.inject({ method: 'DELETE', url: '/api/versions/mel' });
+
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toContain('jxserver');
+    expect(existsSync(path.join(getVersionsDir(root), 'mel'))).toBe(true);
+    expect(readVersionRegistry(root).activeVersion).toBe('mel');
   });
 });

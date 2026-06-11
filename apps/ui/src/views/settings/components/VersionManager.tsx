@@ -53,6 +53,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'extracting'>('idle');
   const [renamingVersion, setRenamingVersion] = useState<GameVersion | null>(null);
+  const [deletingVersion, setDeletingVersion] = useState<GameVersion | null>(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [browsingVersion, setBrowsingVersion] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -260,16 +262,26 @@ export function VersionManager({ onSuccess, onError }: Props) {
     [renamingVersion, renameVersion, renameForm, versions]
   );
 
-  const handleDeleteVersion = useCallback(
-    (name: string) => {
-      deleteVersion(name)
-        .then(() => onSuccessRef.current('Đã xóa phiên bản game thành công'))
-        .catch((error) =>
-          onErrorRef.current(error instanceof Error ? error.message : 'Xóa phiên bản thất bại')
-        );
-    },
-    [deleteVersion]
-  );
+  const handleDeleteVersion = useCallback((version: GameVersion) => {
+    setDeletingVersion(version);
+  }, []);
+
+  const handleConfirmDeleteVersion = useCallback(async () => {
+    if (!deletingVersion) {
+      return;
+    }
+
+    setDeleteLoading(true);
+    try {
+      await deleteVersion(deletingVersion.name);
+      onSuccessRef.current('Đã xóa phiên bản game thành công');
+      setDeletingVersion(null);
+    } catch (error) {
+      onErrorRef.current(error instanceof Error ? error.message : 'Xóa phiên bản thất bại');
+    } finally {
+      setDeleteLoading(false);
+    }
+  }, [deleteVersion, deletingVersion]);
 
   const handleBrowseFolder = useCallback((name: string) => {
     startTransition(() => {
@@ -277,7 +289,7 @@ export function VersionManager({ onSuccess, onError }: Props) {
     });
   }, []);
 
-  const loading = isLoading || cloneMutation.isPending || uploadMutation.isPending;
+  const loading = isLoading || cloneMutation.isPending || uploadMutation.isPending || deleteLoading;
 
   return (
     <Card withBorder padding="md" radius="md">
@@ -371,8 +383,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
                         size="xs"
                         variant="light"
                         color="red"
-                        disabled={ver.isActive || loading}
-                        onClick={() => handleDeleteVersion(ver.name)}
+                        disabled={loading}
+                        onClick={() => handleDeleteVersion(ver)}
                       >
                         Xóa
                       </Button>
@@ -547,6 +559,42 @@ export function VersionManager({ onSuccess, onError }: Props) {
             </Group>
           </Stack>
         </form>
+      </Modal>
+
+      <Modal
+        opened={!!deletingVersion}
+        onClose={() => {
+          if (!deleteLoading) {
+            setDeletingVersion(null);
+          }
+        }}
+        title="Xóa phiên bản game"
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Bạn có chắc muốn xóa phiên bản {deletingVersion?.name}? Thư mục phiên bản game sẽ bị xóa
+            khỏi máy chủ.
+          </Text>
+          {deletingVersion?.isActive && (
+            <Text size="sm" color="red">
+              Đây là phiên bản đang kích hoạt. Hệ thống chỉ cho xóa nếu các dịch vụ jxserver,
+              s3relay, bishop và goddess không chạy.
+            </Text>
+          )}
+          <Group justify="flex-end">
+            <Button
+              variant="default"
+              disabled={deleteLoading}
+              onClick={() => setDeletingVersion(null)}
+            >
+              Hủy
+            </Button>
+            <Button color="red" loading={deleteLoading} onClick={handleConfirmDeleteVersion}>
+              Xóa phiên bản
+            </Button>
+          </Group>
+        </Stack>
       </Modal>
 
       <BrowseFolderModal
