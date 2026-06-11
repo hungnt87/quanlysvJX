@@ -1,18 +1,10 @@
-import { AppShell, Button, Group, NavLink, Stack, Text, Title } from '@mantine/core';
-import { useQueryClient } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { AppShell, Group, NavLink, Stack, Text, Title } from '@mantine/core';
 import { useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { navigationConfig } from '@/configs/routes.config';
-import { serviceKeys } from '@/hooks/useServices';
 
 export default function DashboardLayout() {
-  const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
-
-  const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: serviceKeys.all });
-  }, [queryClient]);
 
   const getActiveKey = () => {
     const path = location.pathname;
@@ -43,9 +35,6 @@ export default function DashboardLayout() {
               docker-compose.yaml
             </Text>
           </div>
-          <Button variant="light" onClick={handleRefresh}>
-            Refresh
-          </Button>
         </Group>
       </AppShell.Header>
 

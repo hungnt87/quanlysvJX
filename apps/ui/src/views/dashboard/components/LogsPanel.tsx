@@ -3,7 +3,7 @@ import {
   Group,
   NumberInput,
   Paper,
-  Select,
+  SegmentedControl,
   Stack,
   Switch,
   Text,
@@ -35,7 +35,7 @@ const SERVICE_COLORS: Record<string, string> = {
   jxmssql: '#ffab40', // Vàng cam
 };
 
-export function LogsPanel({ services, selected, onSelect, onError }: Props) {
+export function LogsPanel({ services: _services, selected, onSelect, onError }: Props) {
   const [tail, setTail] = useState(300);
   const [logs, setLogs] = useState('');
   const [autoFollow, setAutoFollow] = useState(true);
@@ -45,7 +45,22 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   const shouldFollowRef = useRef(true);
   const viewportRef = useRef<HTMLDivElement | null>(null);
 
+  // Danh sách các tab động để duy trì
+  const [dynamicTabs, setDynamicTabs] = useState<string[]>([]);
+
   const activeService = selected || 'all';
+
+  // Tự động thêm tab động nếu dịch vụ được chọn không phải mặc định
+  useEffect(() => {
+    if (
+      activeService !== 'all' &&
+      activeService !== 'jxmysql' &&
+      activeService !== 'jxmssql' &&
+      !dynamicTabs.includes(activeService)
+    ) {
+      setDynamicTabs((prev) => [...prev, activeService]);
+    }
+  }, [activeService, dynamicTabs]);
 
   const logsQuery = useQuery({
     queryKey: serviceKeys.logs(activeService, tail),
@@ -216,16 +231,21 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
     });
   }, [logs, activeService, showTimestamps, formatTimestamp, stripAnsi]);
 
-  const selectData = useMemo(
-    () => [
-      { value: 'all', label: 'Tất cả các dịch vụ' },
-      ...services.map((name) => ({ value: name, label: name })),
-    ],
-    [services]
-  );
+  const segmentOptions = useMemo(() => {
+    const defaults = [
+      { value: 'all', label: 'Tất cả' },
+      { value: 'jxmysql', label: 'MySQL (jxmysql)' },
+      { value: 'jxmssql', label: 'MSSQL (jxmssql)' },
+    ];
+    const dynamics = dynamicTabs.map((name) => ({
+      value: name,
+      label: name,
+    }));
+    return [...defaults, ...dynamics];
+  }, [dynamicTabs]);
 
   const handleSelectChange = useCallback(
-    (value: string | null) => {
+    (value: string) => {
       onSelect(value === 'all' ? 'all' : value);
     },
     [onSelect]
@@ -236,8 +256,6 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
   }, []);
 
   const handleClear = useCallback(() => setLogs(''), []);
-  const handleSelectAll = useCallback(() => onSelect('all'), [onSelect]);
-  const handleRefresh = useCallback(() => logsQuery.refetch(), [logsQuery]);
 
   return (
     <Paper withBorder p="md">
@@ -260,26 +278,28 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
             />
           </Group>
         </Group>
-        <Group grow align="end">
-          <Select
-            label="Service"
-            data={selectData}
-            value={activeService}
-            onChange={handleSelectChange}
+
+        <Group justify="space-between" align="flex-end">
+          <Box style={{ flex: 1, overflowX: 'auto' }}>
+            <SegmentedControl
+              data={segmentOptions}
+              value={activeService}
+              onChange={handleSelectChange}
+            />
+          </Box>
+          <NumberInput
+            label="Tail"
+            min={50}
+            max={2000}
+            value={tail}
+            onChange={handleTailChange}
+            style={{ width: 100 }}
           />
-          <NumberInput label="Tail" min={50} max={2000} value={tail} onChange={handleTailChange} />
         </Group>
-        <Group justify="space-between">
-          <Group gap="xs">
-            <Button variant="default" onClick={handleClear}>
-              Clear
-            </Button>
-            <Button variant="light" onClick={handleSelectAll}>
-              Tất cả
-            </Button>
-          </Group>
-          <Button loading={logsQuery.isFetching} onClick={handleRefresh}>
-            Refresh logs
+
+        <Group justify="flex-start">
+          <Button variant="default" onClick={handleClear}>
+            Clear logs
           </Button>
         </Group>
 
