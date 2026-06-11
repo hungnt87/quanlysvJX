@@ -1,5 +1,7 @@
 import { Alert, Button, Card, Group, Select, Stack, Text, TextInput, Title } from '@mantine/core';
-import { useEffect, useMemo, useState } from 'react';
+import { schemaResolver, useForm } from '@mantine/form';
+import { useEffect, useMemo } from 'react';
+import { z } from 'zod';
 import { useSaveGameNetwork, useSystemInfo } from '@/hooks/useSystemInfo';
 import type { GameNetworkConfig } from '@/services/types';
 
@@ -15,14 +17,36 @@ const fallbackConfig: GameNetworkConfig = {
   mssqlIp: '127.0.0.1',
 };
 
+const ipv4Pattern = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+const invalidIpv4Message = 'Vui lòng nhập đúng IPv4.';
+const invalidHostIpMessage = 'Vui lòng chọn IP thật của máy chủ.';
+
+const ipv4Schema = z.string().regex(ipv4Pattern, invalidIpv4Message);
+
+function createGameNetworkSchema(ipChoices: string[]) {
+  return z.object({
+    jxIp: z
+      .string()
+      .min(1, invalidHostIpMessage)
+      .refine((value) => ipChoices.includes(value), invalidHostIpMessage),
+    mysqlIp: ipv4Schema,
+    paysysIp: ipv4Schema,
+    mssqlIp: ipv4Schema,
+  });
+}
+
 export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
   const { data, isLoading } = useSystemInfo();
   const saveMutation = useSaveGameNetwork();
-  const [values, setValues] = useState<GameNetworkConfig>(fallbackConfig);
+  const form = useForm<GameNetworkConfig>({
+    initialValues: fallbackConfig,
+    validate: (values) =>
+      schemaResolver(createGameNetworkSchema(data?.ipChoices ?? []), { sync: true })(values),
+  });
 
   useEffect(() => {
     if (data?.gameNetwork) {
-      setValues(data.gameNetwork);
+      form.setValues(data.gameNetwork);
     }
   }, [data?.gameNetwork]);
 
@@ -38,17 +62,27 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
   }, [data?.ipChoices, data?.serverIpChoices]);
 
   const setField = (field: keyof GameNetworkConfig, value: string | null) => {
-    if (!value) {
-      return;
-    }
-    setValues((current) => ({ ...current, [field]: value }));
+    form.setFieldValue(field, value ?? '');
+    form.clearFieldError(field);
   };
 
-  const handleSave = () => {
-    saveMutation.mutate(values, {
+  const handleSave = async () => {
+    const validation = await form.validate();
+    if (validation.hasErrors) {
+      return;
+    }
+
+    saveMutation.mutate(form.values, {
       onSuccess: (result) => onSuccess(result.message),
-      onError: (error) =>
-        onError(error instanceof Error ? error.message : 'Không thể lưu cấu hình IP game'),
+      onError: (error) => {
+        const message = error instanceof Error ? error.message : 'Không thể lưu cấu hình IP game';
+        const serverErrors = getServerFieldErrors(message);
+        if (Object.keys(serverErrors).length > 0) {
+          form.setErrors(serverErrors);
+          return;
+        }
+        onError(message);
+      },
     });
   };
 
@@ -72,36 +106,40 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
           <Select
             label="Game server IP"
             data={ipOptions}
-            value={values.jxIp}
+            value={form.values.jxIp}
             onChange={(value) => setField('jxIp', value)}
             disabled={isLoading || saveMutation.isPending}
             placeholder="Chưa tìm thấy IP host"
+            error={form.errors.jxIp}
           />
           <TextInput
             label="MySQL IP"
-            value={values.mysqlIp}
+            value={form.values.mysqlIp}
             onChange={(event) => setField('mysqlIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
             inputMode="numeric"
             placeholder="127.0.0.1"
+            error={form.errors.mysqlIp}
           />
         </Group>
         <Group grow align="flex-start">
           <TextInput
             label="Paysys IP"
-            value={values.paysysIp}
+            value={form.values.paysysIp}
             onChange={(event) => setField('paysysIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
             inputMode="numeric"
             placeholder="127.0.0.1"
+            error={form.errors.paysysIp}
           />
           <TextInput
             label="MSSQL IP"
-            value={values.mssqlIp}
+            value={form.values.mssqlIp}
             onChange={(event) => setField('mssqlIp', event.currentTarget.value)}
             disabled={isLoading || saveMutation.isPending}
             inputMode="numeric"
             placeholder="127.0.0.1"
+            error={form.errors.mssqlIp}
           />
         </Group>
 
@@ -113,4 +151,20 @@ export function GameNetworkConfigPanel({ onSuccess, onError }: Props) {
       </Stack>
     </Card>
   );
+}
+
+function getServerFieldErrors(message: string): Partial<Record<keyof GameNetworkConfig, string>> {
+  if (message.includes('IPv4')) {
+    return {
+      mysqlIp: invalidIpv4Message,
+      paysysIp: invalidIpv4Message,
+      mssqlIp: invalidIpv4Message,
+    };
+  }
+
+  if (message.includes('IP thật') || message.includes('chọn IP')) {
+    return { jxIp: invalidHostIpMessage };
+  }
+
+  return {};
 }

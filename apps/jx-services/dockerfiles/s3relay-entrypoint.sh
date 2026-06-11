@@ -56,7 +56,7 @@ update_ini_key() {
                     right = substr($0, separator_index + 1)
                     key_name = tolower(trim(left))
                     if (key_name == target_key && left !~ /^[[:space:]]*[;#]/) {
-                        match(right, /^[[:space:]]*/)
+                        match(right, /^[ \t]*/)
                         print left "=" substr(right, RSTART, RLENGTH) replacement
                         next
                     }
@@ -82,6 +82,14 @@ update_database_key() {
     fi
 }
 
+clear_database_role_settings() {
+    update_ini_key "$TEMP_INI" "role" "Server" ""
+    update_ini_key "$TEMP_INI" "role" "DataBase" ""
+    update_ini_key "$TEMP_INI" "role" "User" ""
+    update_ini_key "$TEMP_INI" "role" "PassWord" ""
+    UPDATED=1
+}
+
 DATABASE_INI="/src/paysys/database.ini"
 if [ -f "$DATABASE_INI" ]; then
     echo "[S3Relay] Checking encrypted database settings..."
@@ -98,6 +106,7 @@ if [ -f "$DATABASE_INI" ]; then
     update_database_key "${JX_MSSQL_DB_ENCRYPTED:-}" "DataBase" "Database Name"
     update_database_key "${JX_MSSQL_USER_ENCRYPTED:-}" "User" "User"
     update_database_key "${JX_MSSQL_PASS_ENCRYPTED:-}" "PassWord" "PassWord"
+    clear_database_role_settings
 
     # Chỉ ghi đè lại file gốc nếu có cập nhật
     if [ "$UPDATED" -eq 1 ]; then

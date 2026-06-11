@@ -80,4 +80,41 @@ describe('GameNetworkConfigPanel', () => {
       );
     });
   });
+
+  it('shows client IPv4 validation errors below the invalid textbox', async () => {
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+
+    renderWithProviders(<GameNetworkConfigPanel onSuccess={onSuccess} onError={onError} />, {
+      route: '/settings/versions',
+    });
+
+    await screen.findByText(/jxserver/);
+    fireEvent.change(screen.getByLabelText('MySQL IP'), { target: { value: '999.1.1.1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu cấu hình IP' }));
+
+    expect(await screen.findByText('Vui lòng nhập đúng IPv4.')).toBeTruthy();
+    expect(mockSaveGameNetwork).not.toHaveBeenCalled();
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it('maps server IPv4 validation errors back to the IP textboxes', async () => {
+    const onSuccess = vi.fn();
+    const onError = vi.fn();
+    mockSaveGameNetwork.mockRejectedValueOnce(
+      new Error('IP không hợp lệ. Vui lòng nhập đúng IPv4.')
+    );
+
+    renderWithProviders(<GameNetworkConfigPanel onSuccess={onSuccess} onError={onError} />, {
+      route: '/settings/versions',
+    });
+
+    await screen.findByText(/jxserver/);
+    fireEvent.click(screen.getByRole('button', { name: 'Lưu cấu hình IP' }));
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Vui lòng nhập đúng IPv4.')).toHaveLength(3);
+      expect(onError).not.toHaveBeenCalled();
+    });
+  });
 });
