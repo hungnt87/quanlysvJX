@@ -21,8 +21,7 @@ services:
       - /proc:/host/proc:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
-    cap_add:
-      - SYS_ADMIN
+    privileged: true
     networks:
       - manager-net
     extra_hosts:

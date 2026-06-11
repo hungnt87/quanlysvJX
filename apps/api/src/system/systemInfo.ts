@@ -41,7 +41,7 @@ export type ServerIpChoiceOptions = {
 
 const coreServiceNames = new Set(['jxserver', 's3relay', 'bishop', 'goddess']);
 const loopbackIp = '127.0.0.1';
-const virtualInterfacePattern = /^(docker\d*|br-.+|veth.+|virbr\d*|lo)$/;
+const virtualInterfacePattern = /^(docker\d*|br-.+|veth.+|virbr\d*|lo|tailscale\d*|zt.+|wg\d*|tun\d*|tap\d*)$/;
 const ipv4Pattern = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
 
 export function getServerIpChoices(options: ServerIpChoiceOptions = {}) {

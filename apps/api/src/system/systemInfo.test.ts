@@ -28,6 +28,8 @@ describe('systemInfo domain', () => {
         stdout:
           '2: eth0    inet 192.168.1.20/24 brd 192.168.1.255 scope global eth0\n' +
           '3: docker0 inet 172.18.0.1/16 brd 172.18.255.255 scope global docker0\n' +
+          '4: tailscale0 inet 100.65.85.5/32 scope global tailscale0\n' +
+          '5: zt6jy4cyx3 inet 192.168.192.47/24 scope global zt6jy4cyx3\n' +
           '4: wlan0   inet 10.10.10.5/24 brd 10.10.10.255 scope global wlan0\n',
         exitCode: 0
       }),
@@ -39,7 +41,7 @@ describe('systemInfo domain', () => {
     expect(choices).toEqual(['10.10.10.5', '192.168.1.20']);
   });
 
-  it('builds host IPv4 choices and filters loopback, docker, and bridge interfaces', () => {
+  it('builds host IPv4 choices and filters loopback, docker, bridge, and VPN interfaces', () => {
     const choices = getServerIpChoices({
       commandRunner: () => ({ stdout: '', exitCode: 1 }),
       interfaces: {
@@ -48,7 +50,9 @@ describe('systemInfo domain', () => {
         wlan0: [{ address: '10.10.10.5', family: 'IPv4', internal: false } as any],
         docker0: [{ address: '172.18.0.1', family: 'IPv4', internal: false } as any],
         'br-123': [{ address: '172.19.0.1', family: 'IPv4', internal: false } as any],
-        vethabc: [{ address: '169.254.10.2', family: 'IPv4', internal: false } as any]
+        vethabc: [{ address: '169.254.10.2', family: 'IPv4', internal: false } as any],
+        tailscale0: [{ address: '100.65.85.5', family: 'IPv4', internal: false } as any],
+        zt6jy4cyx3: [{ address: '192.168.192.47', family: 'IPv4', internal: false } as any]
       }
     });
 
