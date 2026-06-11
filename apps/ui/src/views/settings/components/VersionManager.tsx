@@ -21,6 +21,7 @@ import type { GameVersion } from '@/services/types';
 import { versionService } from '@/services/versionService';
 import { focusFirstError } from '@/utils/formUtils';
 import { BrowseFolderModal } from './BrowseFolderModal';
+import { GameNetworkConfigPanel } from './GameNetworkConfigPanel';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -292,7 +293,9 @@ export function VersionManager({ onSuccess, onError }: Props) {
   const loading = isLoading || cloneMutation.isPending || uploadMutation.isPending || deleteLoading;
 
   return (
-    <Card withBorder padding="md" radius="md">
+    <Stack gap="md">
+      <GameNetworkConfigPanel onSuccess={onSuccess} onError={onError} />
+      <Card withBorder padding="md" radius="md">
       <Stack gap="md">
         <div>
           <Title order={4}>Quản lý các Phiên bản Game</Title>
@@ -604,7 +607,8 @@ export function VersionManager({ onSuccess, onError }: Props) {
         onSelectPath={handleSelectSubPath}
         isSelecting={loading}
       />
-    </Card>
+      </Card>
+    </Stack>
   );
 }
 

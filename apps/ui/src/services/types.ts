@@ -109,3 +109,27 @@ export type UpdateGameAccountPayload = {
   expiresAt: string;
   leftSeconds: number;
 };
+
+export type GameNetworkConfig = {
+  jxIp: string;
+  mysqlIp: string;
+  paysysIp: string;
+  mssqlIp: string;
+};
+
+export type SystemInfo = {
+  serverTime: string;
+  timezone: string;
+  ipChoices: string[];
+  serverIp: string;
+  mysqlIp: string;
+  mssqlIp: string;
+  gameNetwork: GameNetworkConfig;
+  coreServicesRunning: boolean;
+  runningCoreServices: string[];
+};
+
+export type SaveGameNetworkResponse = {
+  gameNetwork: GameNetworkConfig;
+  message: string;
+};
