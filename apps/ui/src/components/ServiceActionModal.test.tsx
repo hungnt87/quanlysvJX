@@ -36,6 +36,9 @@ const service = {
   image: 'paysys',
   ports: [],
   startedAt: null,
+  imageExists: true,
+  hasBuild: false,
+  imageName: 'paysys',
 };
 
 describe('ServiceActionModal structured start events', () => {

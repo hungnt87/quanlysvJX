@@ -1,14 +1,4 @@
-import {
-  Modal,
-  Button,
-  Group,
-  Stack,
-  Text,
-  ScrollArea,
-  Box,
-  Badge,
-  Paper,
-} from '@mantine/core';
+import { Modal, Button, Group, Stack, Text, ScrollArea, Box, Badge, Paper } from '@mantine/core';
 import { useEffect, useRef, useState } from 'react';
 import { serviceService } from '@/services/serviceService';
 import type { ServiceStatus } from '@/services/types';
@@ -39,6 +29,11 @@ export function PrepareImagesModal({
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
 
+  const getImageName = (serviceName: string) => {
+    const s = servicesInfo.find((item) => item.name === serviceName);
+    return s ? s.imageName : serviceName;
+  };
+
   // Initialize service statuses when modal is opened
   useEffect(() => {
     if (opened && servicesToPrepare.length > 0) {
@@ -60,9 +55,10 @@ export function PrepareImagesModal({
       source.addEventListener('start', (event: any) => {
         try {
           const data = JSON.parse(event.data);
-          setActiveService(data.service);
+          const imgName = getImageName(data.service);
+          setActiveService(imgName);
           setStatuses((prev) => ({ ...prev, [data.service]: 'running' }));
-          setLogs((prev) => `${prev}\n>>> [${data.service}] ${data.message}\n`);
+          setLogs((prev) => `${prev}\n>>> [${imgName}] ${data.message}\n`);
         } catch (e) {
           // ignore
         }
@@ -80,8 +76,9 @@ export function PrepareImagesModal({
       source.addEventListener('success', (event: any) => {
         try {
           const data = JSON.parse(event.data);
+          const imgName = getImageName(data.service);
           setStatuses((prev) => ({ ...prev, [data.service]: 'success' }));
-          setLogs((prev) => `${prev}\n>>> [${data.service}] ${data.message}\n`);
+          setLogs((prev) => `${prev}\n>>> [${imgName}] ${data.message}\n`);
         } catch (e) {
           // ignore
         }
@@ -90,11 +87,9 @@ export function PrepareImagesModal({
       source.addEventListener('error', (event: any) => {
         try {
           const data = JSON.parse(event.data);
+          const imgName = getImageName(data.service);
           setStatuses((prev) => ({ ...prev, [data.service]: 'error' }));
-          setLogs(
-            (prev) =>
-              `${prev}\n>>> LỖI [${data.service}]: ${data.message}\n${data.detail}\n`
-          );
+          setLogs((prev) => `${prev}\n>>> LỖI [${imgName}]: ${data.message}\n${data.detail}\n`);
           setHasError(true);
         } catch (e) {
           // ignore
@@ -140,7 +135,7 @@ export function PrepareImagesModal({
     if (!s) {
       return name;
     }
-    return `${name} [${s.hasBuild ? 'Build' : 'Tải'}]`;
+    return `${s.imageName} [${s.hasBuild ? 'Build' : 'Tải'}]`;
   };
 
   const getStatusBadge = (state: ServiceState) => {
@@ -148,11 +143,19 @@ export function PrepareImagesModal({
       case 'waiting':
         return <Badge color="gray">Đang chờ</Badge>;
       case 'running':
-        return <Badge color="yellow" variant="filled">Đang chạy</Badge>;
+        return (
+          <Badge color="yellow" variant="filled">
+            Đang chạy
+          </Badge>
+        );
       case 'success':
         return <Badge color="green">Thành công</Badge>;
       case 'error':
-        return <Badge color="red" variant="filled">Lỗi</Badge>;
+        return (
+          <Badge color="red" variant="filled">
+            Lỗi
+          </Badge>
+        );
       default:
         return null;
     }
@@ -162,7 +165,11 @@ export function PrepareImagesModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={<Text fw={700} size="lg">Chuẩn bị Docker Images</Text>}
+      title={
+        <Text fw={700} size="lg">
+          Chuẩn bị Docker Images
+        </Text>
+      }
       size="xl"
       closeOnClickOutside={isFinished}
       closeOnEscape={isFinished}
@@ -170,11 +177,14 @@ export function PrepareImagesModal({
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Hệ thống đang tiến hành chuẩn bị các Docker Images bị thiếu cục bộ. Việc này sẽ chạy tuần tự để đảm bảo hiệu suất của máy chủ.
+          Hệ thống đang tiến hành chuẩn bị các Docker Images bị thiếu cục bộ. Việc này sẽ chạy tuần
+          tự để đảm bảo hiệu suất của máy chủ.
         </Text>
 
         <Paper withBorder p="xs" bg="var(--mantine-color-gray-light)">
-          <Text size="xs" fw={700} mb={6}>Danh sách dịch vụ:</Text>
+          <Text size="xs" fw={700} mb={6}>
+            Danh sách Docker Image:
+          </Text>
           <Group gap="xs">
             {servicesToPrepare.map((name) => (
               <Paper
@@ -186,10 +196,12 @@ export function PrepareImagesModal({
                   alignItems: 'center',
                   gap: '8px',
                   backgroundColor:
-                    activeService === name ? 'var(--mantine-color-blue-light)' : '#fff',
+                    activeService === getImageName(name)
+                      ? 'var(--mantine-color-blue-light)'
+                      : '#fff',
                 }}
               >
-                <Text size="xs" fw={activeService === name ? 700 : 500}>
+                <Text size="xs" fw={activeService === getImageName(name) ? 700 : 500}>
                   {getServiceLabel(name)}
                 </Text>
                 {getStatusBadge(statuses[name] || 'waiting')}
@@ -198,7 +210,9 @@ export function PrepareImagesModal({
           </Group>
         </Paper>
 
-        <Text size="xs" fw={700}>Log tiến trình:</Text>
+        <Text size="xs" fw={700}>
+          Log tiến trình:
+        </Text>
         <ScrollArea
           viewportRef={viewportRef}
           h={300}

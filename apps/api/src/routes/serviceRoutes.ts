@@ -233,7 +233,7 @@ export async function registerServiceRoutes(app: FastifyInstance) {
   app.post('/api/services/:name/stop', async (request) => {
     const name = assertServiceName((request.params as { name: string }).name);
     await preHandleStopDependency(app, name);
-    return ok(await runAction(app, ['stop', name], `Stopped ${name}`));
+    return ok(await runAction(app, ['rm', '-f', '-s', name], `Stopped ${name}`));
   });
 
   app.post('/api/services/:name/restart', async (request) => {
@@ -257,7 +257,7 @@ async function preHandleStopDependency(app: FastifyInstance, serviceName: string
     );
     if (isS3RelayRunning) {
       // Tự động tắt s3relay chạy ngầm trước
-      await runAction(app, ['stop', 's3relay'], 'Auto stopped s3relay');
+      await runAction(app, ['rm', '-f', '-s', 's3relay'], 'Auto stopped s3relay');
     }
   }
 

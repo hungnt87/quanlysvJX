@@ -1,11 +1,12 @@
-import { Grid, Stack, Button, Group } from '@mantine/core';
-import { useCallback, useState } from 'react';
+import { Grid, Stack, Button, Group, Paper, Text } from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useState } from 'react';
+import { BatchActionModal } from '@/components/BatchActionModal';
 import { ServiceActionModal } from '@/components/ServiceActionModal';
 import { useServices, serviceKeys } from '@/hooks/useServices';
 import { LogsPanel } from './components/LogsPanel';
-import { ServiceTable } from './components/ServiceTable';
 import { PrepareImagesModal } from './components/PrepareImagesModal';
+import { ServiceTable } from './components/ServiceTable';
 
 export default function Dashboard() {
   const queryClient = useQueryClient();
@@ -19,6 +20,7 @@ export default function Dashboard() {
 
   const [prepareOpened, setPrepareOpened] = useState(false);
   const [servicesToPrepare, setServicesToPrepare] = useState<string[]>([]);
+  const [batchAction, setBatchAction] = useState<'start' | 'stop' | null>(null);
 
   const handleSelectService = useCallback((service: string | null) => {
     setSelectedService(service);
@@ -81,6 +83,15 @@ export default function Dashboard() {
     void queryClient.invalidateQueries({ queryKey: serviceKeys.all });
   }, [queryClient]);
 
+  const handleOpenBatch = useCallback((action: 'start' | 'stop') => {
+    setBatchAction(action);
+  }, []);
+
+  const handleBatchSuccess = useCallback(() => {
+    setBatchAction(null);
+    void queryClient.invalidateQueries({ queryKey: serviceKeys.all });
+  }, [queryClient]);
+
   const missingImagesCount = services.reduce((acc, s) => {
     if (!s.imageExists) {
       acc.add(s.imageName);
@@ -91,12 +102,30 @@ export default function Dashboard() {
   return (
     <Stack gap="md">
       {missingImagesCount > 0 && (
-        <Group justify="flex-start">
-          <Button color="blue" onClick={handlePrepareAllImages}>
-            {`Tải hàng loạt docker image (${missingImagesCount})`}
-          </Button>
-        </Group>
+        <Paper
+          withBorder
+          p="md"
+          bg="var(--mantine-color-red-light)"
+          style={{ borderColor: 'var(--mantine-color-red-outline)' }}
+        >
+          <Group justify="space-between" align="center">
+            <Stack gap={2}>
+              <Text fw={700} c="red" size="md">
+                Cảnh báo: Thiếu Docker Images
+              </Text>
+              <Text size="sm" c="dimmed">
+                Hệ thống phát hiện có {missingImagesCount} Docker Images chưa được tải về hoặc build
+                cục bộ. Bạn cần chuẩn bị đầy đủ các images này để kích hoạt nút Start và khởi chạy
+                dịch vụ.
+              </Text>
+            </Stack>
+            <Button color="red" size="md" onClick={handlePrepareAllImages}>
+              {`Tải hàng loạt docker image (${missingImagesCount})`}
+            </Button>
+          </Group>
+        </Paper>
       )}
+
       <Grid align="stretch">
         <Grid.Col span={{ base: 12, md: 3 }}>
           <ServiceTable
@@ -104,6 +133,8 @@ export default function Dashboard() {
             selected={selectedService}
             onSelect={handleSelectService}
             onAction={handleRunAction}
+            onBatchAction={handleOpenBatch}
+            missingImagesCount={missingImagesCount}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 9 }}>
@@ -131,6 +162,13 @@ export default function Dashboard() {
         servicesToPrepare={servicesToPrepare}
         servicesInfo={services}
         onSuccess={handlePrepareSuccess}
+      />
+      <BatchActionModal
+        opened={batchAction !== null}
+        action={batchAction}
+        services={services}
+        onClose={() => setBatchAction(null)}
+        onSuccess={handleBatchSuccess}
       />
     </Stack>
   );

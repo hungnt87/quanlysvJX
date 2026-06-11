@@ -212,4 +212,30 @@ describe('service routes', () => {
     expect(response.payload).toContain('UP_FAILED');
     expect(response.payload).toContain('port already allocated');
   });
+
+  it('runs stop through docker compose rm -f -s', async () => {
+    const calls: string[][] = [];
+    const app = await buildApp({
+      config: testConfig(root),
+      runCompose: async (args) => {
+        calls.push([...args]);
+        if (args[0] === 'ps') {
+          return {
+            stdout: JSON.stringify([{ Service: 'paysys', Name: 'paysys', State: 'running' }]),
+            stderr: '',
+            exitCode: 0
+          };
+        }
+        return { stdout: '', stderr: '', exitCode: 0 };
+      }
+    });
+
+    const response = await app.inject({ method: 'POST', url: '/api/services/paysys/stop' });
+
+    expect(response.statusCode).toBe(200);
+    expect(calls).toEqual([
+      ['ps', '--all', '--format', 'json'],
+      ['rm', '-f', '-s', 'paysys']
+    ]);
+  });
 });

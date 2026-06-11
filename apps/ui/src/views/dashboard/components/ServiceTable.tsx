@@ -1,4 +1,4 @@
-import { Badge, Button, Group, Table, Text, Tooltip } from '@mantine/core';
+import { Badge, Button, Group, Table, Text, Tooltip, Stack } from '@mantine/core';
 import React from 'react';
 import type { ServiceStatus } from '@/services/types';
 
@@ -7,6 +7,8 @@ type Props = {
   selected: string | null;
   onSelect: (service: string) => void;
   onAction: (service: string, action: 'start' | 'stop' | 'restart') => void;
+  onBatchAction?: (action: 'start' | 'stop') => void;
+  missingImagesCount?: number;
 };
 
 const SERVICE_COLORS: Record<string, string> = {
@@ -240,7 +242,14 @@ const ServiceRow = React.memo(
 
 ServiceRow.displayName = 'ServiceRow';
 
-export function ServiceTable({ services, selected, onSelect, onAction }: Props) {
+export function ServiceTable({
+  services,
+  selected,
+  onSelect,
+  onAction,
+  onBatchAction,
+  missingImagesCount = 0,
+}: Props) {
   const isS3RelayRunning = React.useMemo(
     () =>
       services.some(
@@ -261,35 +270,52 @@ export function ServiceTable({ services, selected, onSelect, onAction }: Props) 
   );
 
   return (
-    <Table.ScrollContainer minWidth={320}>
-      <Table
-        striped
-        highlightOnHover
-        withTableBorder
-        style={{ tableLayout: 'fixed', width: '100%' }}
-      >
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th style={{ width: '45%' }}>Service (Status / Health)</Table.Th>
-            <Table.Th style={{ width: '55%' }}>Actions</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {services.map((service) => (
-            <ServiceRow
-              key={service.name}
-              service={service}
-              selected={selected}
-              onSelect={onSelect}
-              onAction={onAction}
-              _isS3RelayRunning={isS3RelayRunning}
-              areOtherServicesRunning={areOtherServicesRunning}
-              services={services}
-            />
-          ))}
-        </Table.Tbody>
-      </Table>
-    </Table.ScrollContainer>
+    <Stack gap="xs">
+      {onBatchAction && (
+        <Group grow gap="xs">
+          <Button
+            size="xs"
+            color="green"
+            onClick={() => onBatchAction('start')}
+            disabled={missingImagesCount > 0}
+          >
+            Start All
+          </Button>
+          <Button size="xs" color="red" onClick={() => onBatchAction('stop')}>
+            Stop All
+          </Button>
+        </Group>
+      )}
+      <Table.ScrollContainer minWidth={320}>
+        <Table
+          striped
+          highlightOnHover
+          withTableBorder
+          style={{ tableLayout: 'fixed', width: '100%' }}
+        >
+          <Table.Thead>
+            <Table.Tr>
+              <Table.Th style={{ width: '45%' }}>Service (Status / Health)</Table.Th>
+              <Table.Th style={{ width: '55%' }}>Actions</Table.Th>
+            </Table.Tr>
+          </Table.Thead>
+          <Table.Tbody>
+            {services.map((service) => (
+              <ServiceRow
+                key={service.name}
+                service={service}
+                selected={selected}
+                onSelect={onSelect}
+                onAction={onAction}
+                _isS3RelayRunning={isS3RelayRunning}
+                areOtherServicesRunning={areOtherServicesRunning}
+                services={services}
+              />
+            ))}
+          </Table.Tbody>
+        </Table>
+      </Table.ScrollContainer>
+    </Stack>
   );
 }
 
@@ -305,4 +331,3 @@ function stateColor(state: string) {
   }
   return 'orange';
 }
-
