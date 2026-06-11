@@ -1,6 +1,7 @@
 import { chmodSync, chownSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { updateEnvKey } from '../env/envFile.js';
 
 const versionNamePattern = /^[A-Za-z0-9_-]{1,10}$/;
 
@@ -284,28 +285,4 @@ function getActiveServerPathFromEnv(projectRoot: string) {
 
 function toEnvServerPath(serverPath: string) {
   return path.resolve(serverPath) + '/';
-}
-
-function updateEnvKey(filePath: string, key: string, value: string) {
-  if (!existsSync(filePath)) {
-    writeFileSync(filePath, `${key}=${value}\n`, 'utf8');
-    return;
-  }
-
-  const lines = readFileSync(filePath, 'utf8').split(/\r?\n/);
-  let found = false;
-  const updatedLines = lines.flatMap((line) => {
-    const trimmed = line.trim();
-    if (trimmed.startsWith(`${key}=`) || trimmed.startsWith(`# ${key}=`) || trimmed.startsWith(`#${key}=`)) {
-      if (found) return [];
-      found = true;
-      return [`${key}=${value}`];
-    }
-    return [line];
-  });
-
-  if (!found) {
-    updatedLines.push(`${key}=${value}`);
-  }
-  writeFileSync(filePath, updatedLines.join('\n'), 'utf8');
 }
