@@ -18,8 +18,11 @@ services:
         source: *manager-host-root
         target: *manager-host-root
       - /var/run/docker.sock:/var/run/docker.sock
+      - /proc:/host/proc:ro
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
+    cap_add:
+      - SYS_ADMIN
     networks:
       - manager-net
     extra_hosts:

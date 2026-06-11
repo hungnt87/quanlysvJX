@@ -28,7 +28,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 
 FROM node:24-alpine AS runtime
 
-RUN apk add --no-cache docker-cli docker-cli-compose git unzip tar
+RUN apk add --no-cache docker-cli docker-cli-compose git iproute2 tar unzip util-linux
 
 WORKDIR /app/apps/api
 
