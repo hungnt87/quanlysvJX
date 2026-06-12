@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/utils/test/renderWithProviders';
 import { BackupPanel } from './BackupPanel';
 
@@ -30,6 +30,8 @@ const mockSettings = {
   backupScheduleFile: '/backup-schedules.json',
 };
 
+const mockUseServices = vi.fn();
+
 vi.mock('@/hooks/useBackups', () => {
   const keys = {
     all: ['backups'] as const,
@@ -56,6 +58,10 @@ vi.mock('@/hooks/useBackups', () => {
   };
 });
 
+vi.mock('@/hooks/useServices', () => ({
+  useServices: (...args: unknown[]) => mockUseServices(...args),
+}));
+
 vi.mock('@/services/backupService', () => ({
   backupService: {
     getJobs: vi.fn().mockResolvedValue([]),
@@ -63,7 +69,19 @@ vi.mock('@/services/backupService', () => ({
 }));
 
 describe('BackupPanel routing', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    mockUseServices.mockReset();
+  });
+
+  beforeEach(() => {
+    mockUseServices.mockReturnValue({
+      services: [
+        { name: 'jxmysql', state: 'running', health: 'healthy' },
+        { name: 'jxmssql', state: 'running', health: 'healthy' },
+      ],
+    });
+  });
 
   it('selects Schedule tab from /backup/schedule', async () => {
     renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, {
@@ -86,5 +104,29 @@ describe('BackupPanel routing', () => {
     fireEvent.click(await screen.findByRole('tab', { name: 'Jobs' }));
 
     expect(screen.getByRole('tab', { name: 'Jobs' }).getAttribute('aria-selected')).toBe('true');
+  });
+
+  it('warns and disables only unavailable backup actions when a database is not healthy', async () => {
+    mockUseServices.mockReturnValue({
+      services: [
+        { name: 'jxmysql', state: 'running', health: 'healthy' },
+        { name: 'jxmssql', state: 'running', health: 'unhealthy' },
+      ],
+    });
+
+    renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, {
+      route: '/backup/files',
+    });
+
+    expect(await screen.findByText(/MSSQL chưa sẵn sàng/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sao lưu tất cả' }).hasAttribute('disabled')).toBe(
+      true
+    );
+    expect(screen.getByRole('button', { name: 'Sao lưu MySQL' }).hasAttribute('disabled')).toBe(
+      false
+    );
+    expect(screen.getByRole('button', { name: 'Sao lưu MSSQL' }).hasAttribute('disabled')).toBe(
+      true
+    );
   });
 });

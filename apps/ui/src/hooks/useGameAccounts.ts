@@ -8,12 +8,16 @@ export const gameAccountKeys = {
     [...gameAccountKeys.all, 'list', params] as const,
 };
 
-export const useGameAccounts = (params: { search: string; page: number; pageSize: number }) => {
+export const useGameAccounts = (
+  params: { search: string; page: number; pageSize: number },
+  options: { enabled?: boolean } = {}
+) => {
   const queryClient = useQueryClient();
 
   const accountsQuery = useQuery({
     queryKey: gameAccountKeys.lists(params),
     queryFn: () => gameAccountService.getGameAccounts(params),
+    enabled: options.enabled ?? true,
   });
 
   const createMutation = useMutation({

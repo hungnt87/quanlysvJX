@@ -1,4 +1,5 @@
-import { Badge, Button, Group, Table } from '@mantine/core';
+import { Badge, Button, Group, Table, Text, Tooltip } from '@mantine/core';
+import type { ReactNode } from 'react';
 import type { GameAccount } from '@/services/types';
 
 type Props = {
@@ -9,6 +10,9 @@ type Props = {
   onDelete: (account: GameAccount) => void;
   onBan: (account: GameAccount) => void;
   onUnban: (account: GameAccount) => void;
+  actionsDisabled?: boolean;
+  disabledReason?: string;
+  emptyMessage?: string;
 };
 
 export function GameAccountTable({
@@ -19,7 +23,22 @@ export function GameAccountTable({
   onDelete,
   onBan,
   onUnban,
+  actionsDisabled = false,
+  disabledReason = 'Thao tác đang bị khóa',
+  emptyMessage = 'Không có tài khoản',
 }: Props) {
+  const wrapAction = (button: ReactNode) => {
+    if (!actionsDisabled) {
+      return button;
+    }
+
+    return (
+      <Tooltip label={disabledReason} withArrow>
+        <span>{button}</span>
+      </Tooltip>
+    );
+  };
+
   return (
     <Table striped highlightOnHover withTableBorder>
       <Table.Thead>
@@ -32,47 +51,94 @@ export function GameAccountTable({
         </Table.Tr>
       </Table.Thead>
       <Table.Tbody>
-        {accounts.map((account) => (
-          <Table.Tr key={account.accountName}>
-            <Table.Td>{account.accountName}</Table.Td>
-            <Table.Td>{account.expiresAt ?? '-'}</Table.Td>
-            <Table.Td>{account.leftSeconds ?? 0}</Table.Td>
-            <Table.Td>
-              <Badge color={account.status === 'banned' ? 'red' : 'green'}>
-                {account.status === 'banned' ? 'Đã ban' : 'Hoạt động'}
-              </Badge>
-            </Table.Td>
-            <Table.Td>
-              <Group gap="xs">
-                <Button size="xs" variant="light" onClick={() => onChangePassword(account)}>
-                  Đổi MK1
-                </Button>
-                <Button
-                  size="xs"
-                  variant="light"
-                  onClick={() => onChangeSecondaryPassword(account)}
-                >
-                  Đổi MK2
-                </Button>
-                <Button size="xs" variant="light" onClick={() => onExtend(account)}>
-                  Gia hạn
-                </Button>
-                {account.status === 'banned' ? (
-                  <Button size="xs" color="green" variant="light" onClick={() => onUnban(account)}>
-                    Mở khóa
-                  </Button>
-                ) : (
-                  <Button size="xs" color="yellow" variant="light" onClick={() => onBan(account)}>
-                    Khóa
-                  </Button>
-                )}
-                <Button size="xs" color="red" variant="light" onClick={() => onDelete(account)}>
-                  Xóa
-                </Button>
-              </Group>
+        {accounts.length === 0 ? (
+          <Table.Tr>
+            <Table.Td colSpan={5}>
+              <Text c="dimmed">{emptyMessage}</Text>
             </Table.Td>
           </Table.Tr>
-        ))}
+        ) : (
+          accounts.map((account) => (
+            <Table.Tr key={account.accountName}>
+              <Table.Td>{account.accountName}</Table.Td>
+              <Table.Td>{account.expiresAt ?? '-'}</Table.Td>
+              <Table.Td>{account.leftSeconds ?? 0}</Table.Td>
+              <Table.Td>
+                <Badge color={account.status === 'banned' ? 'red' : 'green'}>
+                  {account.status === 'banned' ? 'Đã ban' : 'Hoạt động'}
+                </Badge>
+              </Table.Td>
+              <Table.Td>
+                <Group gap="xs">
+                  {wrapAction(
+                    <Button
+                      size="xs"
+                      variant="light"
+                      disabled={actionsDisabled}
+                      onClick={() => onChangePassword(account)}
+                    >
+                      Đổi MK1
+                    </Button>
+                  )}
+                  {wrapAction(
+                    <Button
+                      size="xs"
+                      variant="light"
+                      disabled={actionsDisabled}
+                      onClick={() => onChangeSecondaryPassword(account)}
+                    >
+                      Đổi MK2
+                    </Button>
+                  )}
+                  {wrapAction(
+                    <Button
+                      size="xs"
+                      variant="light"
+                      disabled={actionsDisabled}
+                      onClick={() => onExtend(account)}
+                    >
+                      Gia hạn
+                    </Button>
+                  )}
+                  {account.status === 'banned'
+                    ? wrapAction(
+                        <Button
+                          size="xs"
+                          color="green"
+                          variant="light"
+                          disabled={actionsDisabled}
+                          onClick={() => onUnban(account)}
+                        >
+                          Mở khóa
+                        </Button>
+                      )
+                    : wrapAction(
+                        <Button
+                          size="xs"
+                          color="yellow"
+                          variant="light"
+                          disabled={actionsDisabled}
+                          onClick={() => onBan(account)}
+                        >
+                          Khóa
+                        </Button>
+                      )}
+                  {wrapAction(
+                    <Button
+                      size="xs"
+                      color="red"
+                      variant="light"
+                      disabled={actionsDisabled}
+                      onClick={() => onDelete(account)}
+                    >
+                      Xóa
+                    </Button>
+                  )}
+                </Group>
+              </Table.Td>
+            </Table.Tr>
+          ))
+        )}
       </Table.Tbody>
     </Table>
   );

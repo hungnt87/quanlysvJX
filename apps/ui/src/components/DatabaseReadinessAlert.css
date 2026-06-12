@@ -1,0 +1,32 @@
+.database-readiness-alert {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--mantine-color-orange-0), var(--mantine-color-orange-0)) padding-box,
+    linear-gradient(90deg, #f08c00, #fa5252, #ffd43b, #f08c00) border-box;
+  background-size:
+    100% 100%,
+    240% 100%;
+  animation: database-readiness-border 3.5s linear infinite;
+}
+
+@keyframes database-readiness-border {
+  from {
+    background-position:
+      0 0,
+      0% 50%;
+  }
+
+  to {
+    background-position:
+      0 0,
+      240% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .database-readiness-alert {
+    animation: none;
+  }
+}

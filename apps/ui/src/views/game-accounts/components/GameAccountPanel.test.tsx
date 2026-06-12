@@ -1,13 +1,15 @@
 import { cleanup, fireEvent, screen, waitFor } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/utils/test/renderWithProviders';
 import { GameAccountPanel } from './GameAccountPanel';
 
 const mockGameAccounts = vi.fn();
+const mockUseServices = vi.fn();
 
 vi.mock('@/hooks/useGameAccounts', () => ({
-  useGameAccounts: vi.fn((params) => {
+  useGameAccounts: vi.fn((params, options) => {
     mockGameAccounts(params);
+    mockGameAccounts(options);
     return {
       accountsData: {
         items: [
@@ -32,8 +34,28 @@ vi.mock('@/hooks/useGameAccounts', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useServices', () => ({
+  useServices: (...args: unknown[]) => mockUseServices(...args),
+}));
+
 describe('GameAccountPanel', () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    mockGameAccounts.mockReset();
+    mockUseServices.mockReset();
+  });
+
+  beforeEach(() => {
+    mockUseServices.mockReturnValue({
+      services: [
+        {
+          name: 'jxmssql',
+          state: 'running',
+          health: 'healthy',
+        },
+      ],
+    });
+  });
 
   it('renders search, account rows, and pagination', async () => {
     renderWithProviders(<GameAccountPanel onSuccess={vi.fn()} onError={vi.fn()} />);
@@ -54,5 +76,22 @@ describe('GameAccountPanel', () => {
     await waitFor(() =>
       expect(mockGameAccounts).toHaveBeenCalledWith({ search: 'abc', page: 1, pageSize: 10 })
     );
+  });
+
+  it('shows a database warning and disables account actions when MSSQL is not healthy', async () => {
+    mockUseServices.mockReturnValue({
+      services: [{ name: 'jxmssql', state: 'running', health: 'unhealthy' }],
+    });
+
+    renderWithProviders(<GameAccountPanel onSuccess={vi.fn()} onError={vi.fn()} />);
+
+    expect(await screen.findByText(/MSSQL chưa sẵn sàng/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Đi tới Dịch vụ' }).getAttribute('href')).toBe(
+      '/dashboard'
+    );
+    expect(screen.getByRole('button', { name: 'Thêm tài khoản' }).hasAttribute('disabled')).toBe(
+      true
+    );
+    expect(mockGameAccounts).toHaveBeenCalledWith({ enabled: false });
   });
 });

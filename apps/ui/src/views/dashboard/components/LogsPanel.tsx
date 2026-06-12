@@ -257,7 +257,7 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
     <Paper withBorder p="md">
       <Stack gap="sm">
         <Group justify="space-between" align="end">
-          <Text fw={700}>Docker logs</Text>
+          <Text fw={700}>Nhật ký dịch vụ</Text>
           <Group gap="md">
             <Switch
               label="Hiện thời gian"
@@ -295,18 +295,21 @@ export function LogsPanel({ services, selected, onSelect, onError }: Props) {
 
         <Group justify="flex-start">
           <Button variant="default" onClick={handleClear}>
-            Clear logs
+            Xóa nhật ký hiển thị
           </Button>
         </Group>
 
         <Box style={{ position: 'relative' }}>
           <ScrollArea
+            data-testid="service-log-viewport"
             viewportRef={viewportRef}
-            h={400}
             type="auto"
             offsetScrollbars
             onScrollPositionChange={handleScroll}
             style={{
+              height: '55vh',
+              maxHeight: '560px',
+              minHeight: '320px',
               backgroundColor: '#0a0a0a',
               borderRadius: '4px',
               border: '1px solid #333',

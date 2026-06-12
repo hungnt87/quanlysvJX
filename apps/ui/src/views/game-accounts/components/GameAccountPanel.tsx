@@ -1,6 +1,12 @@
-import { Button, Group, Pagination, Stack, TextInput } from '@mantine/core';
+import { Button, Group, Pagination, Stack, TextInput, Tooltip } from '@mantine/core';
 import { useState, useCallback, useTransition } from 'react';
+import {
+  DatabaseReadinessAlert,
+  getUnavailableDatabases,
+  isDatabaseHealthy,
+} from '@/components/DatabaseReadinessAlert';
 import { useGameAccounts } from '@/hooks/useGameAccounts';
+import { useServices } from '@/hooks/useServices';
 import type { GameAccount } from '@/services/types';
 import { BanAccountModal } from './BanAccountModal';
 import { ChangePasswordModal } from './ChangePasswordModal';
@@ -31,6 +37,10 @@ export function GameAccountPanel({ onSuccess, onError }: Props) {
   const [unbanningAccount, setUnbanningAccount] = useState<GameAccount | null>(null);
   const [createOpened, setCreateOpened] = useState(false);
   const [, startTransition] = useTransition();
+  const { services } = useServices(true);
+  const isMssqlReady = isDatabaseHealthy(services, 'mssql');
+  const unavailableDatabases = getUnavailableDatabases(services, ['mssql']);
+  const databaseDisabledReason = 'Cần bật MSSQL trước';
 
   const {
     accountsData,
@@ -40,12 +50,15 @@ export function GameAccountPanel({ onSuccess, onError }: Props) {
     banAccount,
     unbanAccount,
     isActionLoading,
-  } = useGameAccounts({ search, page, pageSize });
+  } = useGameAccounts({ search, page, pageSize }, { enabled: isMssqlReady });
 
-  const data = accountsData ?? {
-    items: [],
-    pagination: { page, pageSize, total: 0, totalPages: 1 },
-  };
+  const data =
+    isMssqlReady && accountsData
+      ? accountsData
+      : {
+          items: [],
+          pagination: { page, pageSize, total: 0, totalPages: 1 },
+        };
 
   const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearch(event.currentTarget.value);
@@ -187,6 +200,7 @@ export function GameAccountPanel({ onSuccess, onError }: Props) {
 
   return (
     <Stack>
+      <DatabaseReadinessAlert unavailable={unavailableDatabases} scope="accounts" />
       <Group align="end">
         <TextInput
           placeholder="Tìm theo tên tài khoản"
@@ -195,10 +209,19 @@ export function GameAccountPanel({ onSuccess, onError }: Props) {
           onChange={handleSearchChange}
           style={{ flex: 1 }}
         />
-        <Button onClick={() => setCreateOpened(true)}>Thêm tài khoản</Button>
+        <Tooltip label={databaseDisabledReason} disabled={isMssqlReady} withArrow>
+          <span>
+            <Button disabled={!isMssqlReady} onClick={() => setCreateOpened(true)}>
+              Thêm tài khoản
+            </Button>
+          </span>
+        </Tooltip>
       </Group>
       <GameAccountTable
         accounts={data.items}
+        actionsDisabled={!isMssqlReady}
+        disabledReason={databaseDisabledReason}
+        emptyMessage={isMssqlReady ? 'Không có tài khoản' : 'Cần bật MSSQL để xem tài khoản'}
         onChangePassword={setPasswordAccount}
         onChangeSecondaryPassword={setSecondaryPasswordAccount}
         onExtend={setExtendAccount}

@@ -1,6 +1,16 @@
-import { Badge, Button, Group, Select, Stack, Table, Text, TextInput } from '@mantine/core';
+import {
+  Badge,
+  Button,
+  Group,
+  Select,
+  Stack,
+  Table,
+  Text,
+  TextInput,
+  Tooltip,
+} from '@mantine/core';
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, type ReactNode } from 'react';
 import { useBackups, backupKeys } from '@/hooks/useBackups';
 import type { BackupFile, BackupKind } from '@/services/types';
 import { BackupEditModal } from './BackupEditModal';
@@ -9,13 +19,14 @@ import { DeleteBackupModal } from './DeleteBackupModal';
 import { RestoreModal } from './RestoreModal';
 
 type Props = {
+  databaseReadiness: Record<BackupKind, boolean>;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
 };
 
 type FilterKind = 'all' | BackupKind;
 
-export function BackupFilesTab({ onSuccess, onError }: Props) {
+export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props) {
   const queryClient = useQueryClient();
   const [filterKind, setFilterKind] = useState<FilterKind>('all');
   const [query, setQuery] = useState('');
@@ -34,11 +45,34 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
     isLoading,
   } = useBackups();
 
-  const handleBackupNow = useCallback(() => {
-    createBackup('all')
-      .then(() => onSuccess('Backup completed'))
-      .catch((error) => onError(error instanceof Error ? error.message : 'Backup action failed'));
-  }, [createBackup, onSuccess, onError]);
+  const handleBackupNow = useCallback(
+    (kind: BackupKind | 'all') => {
+      createBackup(kind)
+        .then(() => onSuccess('Backup completed'))
+        .catch((error) => onError(error instanceof Error ? error.message : 'Backup action failed'));
+    },
+    [createBackup, onSuccess, onError]
+  );
+
+  const wrapDisabled = useCallback((content: ReactNode, disabled: boolean, label: string) => {
+    if (!disabled) {
+      return content;
+    }
+
+    return (
+      <Tooltip label={label} withArrow>
+        <span>{content}</span>
+      </Tooltip>
+    );
+  }, []);
+
+  const isBackupAllDisabled = !databaseReadiness.mysql || !databaseReadiness.mssql;
+  const getDatabaseDisabledReason = (kind: BackupKind) =>
+    kind === 'mysql' ? 'Cần bật MySQL trước' : 'Cần bật MSSQL trước';
+
+  const handleBackupAll = useCallback(() => handleBackupNow('all'), [handleBackupNow]);
+  const handleBackupMysql = useCallback(() => handleBackupNow('mysql'), [handleBackupNow]);
+  const handleBackupMssql = useCallback(() => handleBackupNow('mssql'), [handleBackupNow]);
 
   const handleUpload = useCallback(
     (kind: BackupKind, file: File) => {
@@ -117,7 +151,35 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
       <Stack gap="md">
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
-            <Button onClick={handleBackupNow}>Backup now</Button>
+            {wrapDisabled(
+              <Button disabled={isBackupAllDisabled} onClick={handleBackupAll}>
+                Sao lưu tất cả
+              </Button>,
+              isBackupAllDisabled,
+              'Cần bật MySQL và MSSQL trước'
+            )}
+            {wrapDisabled(
+              <Button
+                disabled={!databaseReadiness.mysql}
+                variant="light"
+                onClick={handleBackupMysql}
+              >
+                Sao lưu MySQL
+              </Button>,
+              !databaseReadiness.mysql,
+              getDatabaseDisabledReason('mysql')
+            )}
+            {wrapDisabled(
+              <Button
+                disabled={!databaseReadiness.mssql}
+                variant="light"
+                onClick={handleBackupMssql}
+              >
+                Sao lưu MSSQL
+              </Button>,
+              !databaseReadiness.mssql,
+              getDatabaseDisabledReason('mssql')
+            )}
             <Button variant="light" onClick={() => setUploadOpened(true)}>
               Upload
             </Button>
@@ -184,9 +246,18 @@ export function BackupFilesTab({ onSuccess, onError }: Props) {
                   <Table.Td>{file.source}</Table.Td>
                   <Table.Td>
                     <Group gap="xs">
-                      <Button size="xs" variant="light" onClick={() => setRestoringFile(file)}>
-                        Restore
-                      </Button>
+                      {wrapDisabled(
+                        <Button
+                          size="xs"
+                          variant="light"
+                          disabled={!databaseReadiness[file.kind]}
+                          onClick={() => setRestoringFile(file)}
+                        >
+                          Restore
+                        </Button>,
+                        !databaseReadiness[file.kind],
+                        getDatabaseDisabledReason(file.kind)
+                      )}
                       <Button size="xs" variant="default" onClick={() => setEditingFile(file)}>
                         Edit
                       </Button>
