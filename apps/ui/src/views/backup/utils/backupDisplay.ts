@@ -1,4 +1,9 @@
-import type { BackupFile, BackupKind, BackupScheduleRule, ScheduledBackupJob } from '@/services/types';
+import type {
+  BackupFile,
+  BackupKind,
+  BackupScheduleRule,
+  ScheduledBackupJob,
+} from '@/services/types';
 
 const dayLabels = new Map<number, string>([
   [0, 'Chủ Nhật'],
@@ -32,9 +37,7 @@ export function formatScheduleDetailVi(schedule: BackupScheduleRule) {
     return `Lúc ${schedule.time}`;
   }
 
-  const days = schedule.daysOfWeek
-    .map((day) => dayLabels.get(day) ?? String(day))
-    .join(', ');
+  const days = schedule.daysOfWeek.map((day) => dayLabels.get(day) ?? String(day)).join(', ');
   return `${days} lúc ${schedule.time}`;
 }
 

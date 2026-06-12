@@ -150,10 +150,18 @@ describe('BackupPanel routing', () => {
 
     expect(await screen.findByText('Tự động: MySQL · Hàng giờ · Mỗi 2 giờ, phút 00')).toBeTruthy();
     expect(screen.getByText('Run: run_123')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Khôi phục file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sửa ghi chú file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
-    expect(screen.getByRole('link', { name: 'Tải xuống file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xóa file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Khôi phục file backup mysql-20260612-030000.sql.gz' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Sửa ghi chú file backup mysql-20260612-030000.sql.gz' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('link', { name: 'Tải xuống file backup mysql-20260612-030000.sql.gz' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Xóa file backup mysql-20260612-030000.sql.gz' })
+    ).toBeTruthy();
   });
 
   it('shows detailed schedule names without sequence suffixes and icon-only schedule actions', async () => {
@@ -177,8 +185,14 @@ describe('BackupPanel routing', () => {
 
     expect(await screen.findByText('MySQL · Hàng giờ · Mỗi 2 giờ, phút 00')).toBeTruthy();
     expect(screen.queryByText('MySQL · Hàng giờ #1')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Chạy ngay lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Sửa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'Xóa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Chạy ngay lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Sửa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Xóa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })
+    ).toBeTruthy();
   });
 });

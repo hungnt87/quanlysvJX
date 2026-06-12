@@ -1,16 +1,11 @@
 import { Badge, Button, Group, Table, Text, Tooltip, Modal, Stack } from '@mantine/core';
+import { useMediaQuery } from '@mantine/hooks';
+import { IconCalendarPlus, IconPencil, IconPlayerPlay, IconTrash } from '@tabler/icons-react';
 import { useState } from 'react';
 import { useBackups } from '@/hooks/useBackups';
 import type { ScheduledBackupJob } from '@/services/types';
-import { ScheduledJobModal } from './ScheduledJobModal';
-import {
-  IconCalendarPlus,
-  IconPencil,
-  IconPlayerPlay,
-  IconTrash,
-} from '@tabler/icons-react';
-import { useMediaQuery } from '@mantine/hooks';
 import { formatScheduleDisplayName } from '../utils/backupDisplay';
+import { ScheduledJobModal } from './ScheduledJobModal';
 
 type Props = {
   onError: (message: string) => void;

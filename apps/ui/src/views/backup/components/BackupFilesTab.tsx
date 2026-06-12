@@ -9,14 +9,7 @@ import {
   TextInput,
   Tooltip,
 } from '@mantine/core';
-import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
-import { useBackups, backupKeys } from '@/hooks/useBackups';
-import type { BackupFile, BackupKind, UploadBackupPayload } from '@/services/types';
-import { BackupEditModal } from './BackupEditModal';
-import { BackupUploadModal } from './BackupUploadModal';
-import { DeleteBackupModal } from './DeleteBackupModal';
-import { RestoreModal } from './RestoreModal';
+import { useMediaQuery } from '@mantine/hooks';
 import {
   IconDatabase,
   IconDatabaseExport,
@@ -27,8 +20,15 @@ import {
   IconTrash,
   IconUpload,
 } from '@tabler/icons-react';
-import { useMediaQuery } from '@mantine/hooks';
+import { useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useRef, useState, useCallback, type ReactNode } from 'react';
+import { useBackups, backupKeys } from '@/hooks/useBackups';
+import type { BackupFile, BackupKind, UploadBackupPayload } from '@/services/types';
 import { formatBackupNoteSummary, formatBackupNoteTooltip } from '../utils/backupDisplay';
+import { BackupEditModal } from './BackupEditModal';
+import { BackupUploadModal } from './BackupUploadModal';
+import { DeleteBackupModal } from './DeleteBackupModal';
+import { RestoreModal } from './RestoreModal';
 
 type Props = {
   databaseReadiness: Record<BackupKind, boolean>;
@@ -51,7 +51,7 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
     'kind' | 'filename'
   > | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  
+
   const isMobile = useMediaQuery('(max-width: 48em)');
   const iconProps = { size: 16, stroke: 1.5 } as const;
 
@@ -192,7 +192,11 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
             {wrapDisabled(
-              <Button disabled={isBackupAllDisabled} leftSection={<IconDatabaseExport {...iconProps} />} onClick={handleBackupAll}>
+              <Button
+                disabled={isBackupAllDisabled}
+                leftSection={<IconDatabaseExport {...iconProps} />}
+                onClick={handleBackupAll}
+              >
                 {renderResponsiveLabel('Sao lưu tất cả')}
               </Button>,
               isBackupAllDisabled,
@@ -207,7 +211,7 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
               >
                 {renderResponsiveLabel('Sao lưu MySQL')}
               </Button>,
-                !databaseReadiness.mysql,
+              !databaseReadiness.mysql,
               getDatabaseDisabledReason('mysql')
             )}
             {wrapDisabled(
@@ -222,10 +226,18 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
               !databaseReadiness.mssql,
               getDatabaseDisabledReason('mssql')
             )}
-            <Button variant="light" leftSection={<IconUpload {...iconProps} />} onClick={() => setUploadOpened(true)}>
+            <Button
+              variant="light"
+              leftSection={<IconUpload {...iconProps} />}
+              onClick={() => setUploadOpened(true)}
+            >
               {renderResponsiveLabel('Tải file backup lên')}
             </Button>
-            <Button variant="default" leftSection={<IconRefresh {...iconProps} />} onClick={handleRefresh}>
+            <Button
+              variant="default"
+              leftSection={<IconRefresh {...iconProps} />}
+              onClick={handleRefresh}
+            >
               {renderResponsiveLabel('Làm mới')}
             </Button>
           </Group>
@@ -294,7 +306,15 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
                     <Table.Td>{formatBytes(file.size)}</Table.Td>
                     <Table.Td>{formatDate(file.modifiedAt)}</Table.Td>
                     <Table.Td>
-                      <Tooltip label={<Text style={{ whiteSpace: 'pre-line' }}>{formatBackupNoteTooltip(file)}</Text>} withArrow multiline>
+                      <Tooltip
+                        label={
+                          <Text style={{ whiteSpace: 'pre-line' }}>
+                            {formatBackupNoteTooltip(file)}
+                          </Text>
+                        }
+                        withArrow
+                        multiline
+                      >
                         <Stack gap={2}>
                           {formatBackupNoteSummary(file).map((line) => (
                             <Text key={line} size="sm" lineClamp={1}>
@@ -361,7 +381,12 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
                             <IconDownload {...iconProps} />
                           </Button>
                         </Tooltip>
-                        <Tooltip label={file.isLatest ? 'Không thể xóa backup mới nhất' : 'Xóa file backup'} withArrow>
+                        <Tooltip
+                          label={
+                            file.isLatest ? 'Không thể xóa backup mới nhất' : 'Xóa file backup'
+                          }
+                          withArrow
+                        >
                           <Button
                             aria-label={`Xóa file backup ${file.filename}`}
                             size="xs"
