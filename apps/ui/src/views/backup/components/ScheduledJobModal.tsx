@@ -10,9 +10,9 @@ import {
 } from '@mantine/core';
 import { useForm } from '@mantine/form';
 import { useEffect } from 'react';
+import { ModalTitle } from '@/components/common/ModalTitle';
 import { useBackups } from '@/hooks/useBackups';
 import type { ScheduledBackupJob, BackupKind } from '@/services/types';
-import { ModalTitle } from '@/components/common/ModalTitle';
 
 type Props = {
   opened: boolean;

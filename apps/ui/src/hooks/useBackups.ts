@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { backupService } from '@/services/backupService';
-import type { BackupKind, UploadBackupPayload, ScheduledBackupJob, BackupSettings } from '@/services/types';
+import type {
+  BackupKind,
+  UploadBackupPayload,
+  ScheduledBackupJob,
+  BackupSettings,
+} from '@/services/types';
 
 export const backupKeys = {
   all: ['backups'] as const,
@@ -76,16 +81,27 @@ export const useBackups = () => {
   });
 
   const createScheduledJobMutation = useMutation({
-    mutationFn: (payload: Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>) =>
-      backupService.createScheduledJob(payload),
+    mutationFn: (
+      payload: Omit<
+        ScheduledBackupJob,
+        'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'
+      >
+    ) => backupService.createScheduledJob(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.scheduledJobs() });
     },
   });
 
   const updateScheduledJobMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>> }) =>
-      backupService.updateScheduledJob(id, payload),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: Partial<
+        Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>
+      >;
+    }) => backupService.updateScheduledJob(id, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: backupKeys.scheduledJobs() });
     },
@@ -124,7 +140,11 @@ export const useBackups = () => {
     scheduledJobs: scheduledJobsQuery.data ?? [],
     scheduledRuns: scheduledRunsQuery.data ?? [],
     settings: settingsQuery.data,
-    isLoading: backupsQuery.isLoading || scheduledJobsQuery.isLoading || scheduledRunsQuery.isLoading || settingsQuery.isLoading,
+    isLoading:
+      backupsQuery.isLoading ||
+      scheduledJobsQuery.isLoading ||
+      scheduledRunsQuery.isLoading ||
+      settingsQuery.isLoading,
     isActionLoading:
       createBackupMutation.isPending ||
       uploadBackupMutation.isPending ||

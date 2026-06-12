@@ -48,7 +48,8 @@ export function BackupSettingsTab({ onError, onSuccess }: Props) {
   return (
     <Stack gap="md">
       <Alert color="blue">
-        Cấu hình số ngày lưu trữ (Retention Days) cho các file sao lưu tự động của từng loại cơ sở dữ liệu.
+        Cấu hình số ngày lưu trữ (Retention Days) cho các file sao lưu tự động của từng loại cơ sở
+        dữ liệu.
       </Alert>
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Stack gap="sm">

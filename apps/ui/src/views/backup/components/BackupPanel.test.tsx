@@ -48,7 +48,9 @@ vi.mock('@/services/backupService', () => ({
     getBackups: vi.fn().mockResolvedValue([]),
     getScheduledJobs: vi.fn().mockResolvedValue([]),
     getScheduledRuns: vi.fn().mockResolvedValue([]),
-    getBackupSettings: vi.fn().mockResolvedValue({ mysqlRetentionDays: 14, mssqlRetentionDays: 14 }),
+    getBackupSettings: vi
+      .fn()
+      .mockResolvedValue({ mysqlRetentionDays: 14, mssqlRetentionDays: 14 }),
   },
 }));
 

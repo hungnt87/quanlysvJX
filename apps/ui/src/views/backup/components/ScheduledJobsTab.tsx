@@ -1,13 +1,4 @@
-import {
-  Badge,
-  Button,
-  Group,
-  Table,
-  Text,
-  Tooltip,
-  Modal,
-  Stack,
-} from '@mantine/core';
+import { Badge, Button, Group, Table, Text, Tooltip, Modal, Stack } from '@mantine/core';
 import { useState } from 'react';
 import { useBackups } from '@/hooks/useBackups';
 import type { ScheduledBackupJob } from '@/services/types';
@@ -103,7 +94,9 @@ export function ScheduledJobsTab({ onError, onSuccess, databaseReadiness }: Prop
                 </Table.Td>
                 <Table.Td>{job.summaryVi || job.schedule.type}</Table.Td>
                 <Table.Td>
-                  {job.nextRunPreviewAt ? new Date(job.nextRunPreviewAt).toLocaleString('vi-VN') : 'Không có'}
+                  {job.nextRunPreviewAt
+                    ? new Date(job.nextRunPreviewAt).toLocaleString('vi-VN')
+                    : 'Không có'}
                 </Table.Td>
                 <Table.Td>
                   <Badge color={job.enabled ? 'green' : 'gray'}>

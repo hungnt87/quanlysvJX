@@ -71,7 +71,9 @@ export const backupService = {
     });
     return res.data;
   },
-  createScheduledJob: async (payload: Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>) => {
+  createScheduledJob: async (
+    payload: Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>
+  ) => {
     const res = await ApiService.fetchData<any, ScheduledBackupJob>({
       url: '/api/scheduled-jobs',
       method: 'POST',
@@ -81,7 +83,9 @@ export const backupService = {
   },
   updateScheduledJob: async (
     id: string,
-    payload: Partial<Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>>
+    payload: Partial<
+      Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>
+    >
   ) => {
     const res = await ApiService.fetchData<any, ScheduledBackupJob>({
       url: `/api/scheduled-jobs/${id}`,

@@ -8,9 +8,9 @@ import {
 import { useServices } from '@/hooks/useServices';
 import type { BackupKind } from '@/services/types';
 import { BackupFilesTab } from './BackupFilesTab';
+import { BackupSettingsTab } from './BackupSettingsTab';
 import { ScheduledJobsTab } from './ScheduledJobsTab';
 import { ScheduledRunsTab } from './ScheduledRunsTab';
-import { BackupSettingsTab } from './BackupSettingsTab';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -62,20 +62,10 @@ function renderBackupTab(
     );
   }
   if (tab === 'jobs') {
-    return (
-      <ScheduledRunsTab
-        onSuccess={onSuccess}
-        onError={onError}
-      />
-    );
+    return <ScheduledRunsTab onSuccess={onSuccess} onError={onError} />;
   }
   if (tab === 'settings') {
-    return (
-      <BackupSettingsTab
-        onSuccess={onSuccess}
-        onError={onError}
-      />
-    );
+    return <BackupSettingsTab onSuccess={onSuccess} onError={onError} />;
   }
   return (
     <BackupFilesTab databaseReadiness={databaseReadiness} onSuccess={onSuccess} onError={onError} />
