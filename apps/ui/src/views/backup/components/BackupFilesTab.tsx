@@ -17,6 +17,18 @@ import { BackupEditModal } from './BackupEditModal';
 import { BackupUploadModal } from './BackupUploadModal';
 import { DeleteBackupModal } from './DeleteBackupModal';
 import { RestoreModal } from './RestoreModal';
+import {
+  IconDatabase,
+  IconDatabaseExport,
+  IconDownload,
+  IconPencil,
+  IconRefresh,
+  IconRestore,
+  IconTrash,
+  IconUpload,
+} from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
+import { formatBackupNoteSummary, formatBackupNoteTooltip } from '../utils/backupDisplay';
 
 type Props = {
   databaseReadiness: Record<BackupKind, boolean>;
@@ -39,6 +51,9 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
     'kind' | 'filename'
   > | null>(null);
   const highlightTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  
+  const isMobile = useMediaQuery('(max-width: 48em)');
+  const iconProps = { size: 16, stroke: 1.5 } as const;
 
   const {
     backups: files,
@@ -153,6 +168,11 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
     queryClient.invalidateQueries({ queryKey: backupKeys.lists() });
   }, [queryClient]);
 
+  const renderResponsiveLabel = useCallback(
+    (label: string) => (isMobile ? null : label),
+    [isMobile]
+  );
+
   const filteredFiles = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return files
@@ -172,8 +192,8 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
         <Group justify="space-between" align="flex-end">
           <Group align="flex-end">
             {wrapDisabled(
-              <Button disabled={isBackupAllDisabled} onClick={handleBackupAll}>
-                Sao lưu tất cả
+              <Button disabled={isBackupAllDisabled} leftSection={<IconDatabaseExport {...iconProps} />} onClick={handleBackupAll}>
+                {renderResponsiveLabel('Sao lưu tất cả')}
               </Button>,
               isBackupAllDisabled,
               'Cần bật MySQL và MSSQL trước'
@@ -182,29 +202,31 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
               <Button
                 disabled={!databaseReadiness.mysql}
                 variant="light"
+                leftSection={<IconDatabase {...iconProps} />}
                 onClick={handleBackupMysql}
               >
-                Sao lưu MySQL
+                {renderResponsiveLabel('Sao lưu MySQL')}
               </Button>,
-              !databaseReadiness.mysql,
+                !databaseReadiness.mysql,
               getDatabaseDisabledReason('mysql')
             )}
             {wrapDisabled(
               <Button
                 disabled={!databaseReadiness.mssql}
                 variant="light"
+                leftSection={<IconDatabase {...iconProps} />}
                 onClick={handleBackupMssql}
               >
-                Sao lưu MSSQL
+                {renderResponsiveLabel('Sao lưu MSSQL')}
               </Button>,
               !databaseReadiness.mssql,
               getDatabaseDisabledReason('mssql')
             )}
-            <Button variant="light" onClick={() => setUploadOpened(true)}>
-              Tải file backup lên
+            <Button variant="light" leftSection={<IconUpload {...iconProps} />} onClick={() => setUploadOpened(true)}>
+              {renderResponsiveLabel('Tải file backup lên')}
             </Button>
-            <Button variant="default" onClick={handleRefresh}>
-              Làm mới
+            <Button variant="default" leftSection={<IconRefresh {...iconProps} />} onClick={handleRefresh}>
+              {renderResponsiveLabel('Làm mới')}
             </Button>
           </Group>
           <Group align="flex-end">
@@ -271,7 +293,17 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
                     </Table.Td>
                     <Table.Td>{formatBytes(file.size)}</Table.Td>
                     <Table.Td>{formatDate(file.modifiedAt)}</Table.Td>
-                    <Table.Td>{file.note ?? '-'}</Table.Td>
+                    <Table.Td>
+                      <Tooltip label={<Text style={{ whiteSpace: 'pre-line' }}>{formatBackupNoteTooltip(file)}</Text>} withArrow multiline>
+                        <Stack gap={2}>
+                          {formatBackupNoteSummary(file).map((line) => (
+                            <Text key={line} size="sm" lineClamp={1}>
+                              {line}
+                            </Text>
+                          ))}
+                        </Stack>
+                      </Tooltip>
+                    </Table.Td>
                     <Table.Td>
                       {file.source === 'uploaded' ? (
                         <Badge color="cyan" variant="outline">
@@ -290,38 +322,58 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
                     <Table.Td>
                       <Group gap="xs">
                         {wrapDisabled(
-                          <Button
-                            size="xs"
-                            variant="light"
-                            disabled={!databaseReadiness[file.kind]}
-                            onClick={() => setRestoringFile(file)}
-                          >
-                            Khôi phục
-                          </Button>,
+                          <Tooltip label="Khôi phục file backup này" withArrow>
+                            <Button
+                              aria-label={`Khôi phục file backup ${file.filename}`}
+                              size="xs"
+                              variant="light"
+                              px="xs"
+                              disabled={!databaseReadiness[file.kind]}
+                              onClick={() => setRestoringFile(file)}
+                            >
+                              <IconRestore {...iconProps} />
+                            </Button>
+                          </Tooltip>,
                           !databaseReadiness[file.kind],
                           getDatabaseDisabledReason(file.kind)
                         )}
-                        <Button size="xs" variant="default" onClick={() => setEditingFile(file)}>
-                          Sửa
-                        </Button>
-                        <Button
-                          size="xs"
-                          variant="light"
-                          component="a"
-                          href={`/api/backups/${file.kind}/${encodeURIComponent(file.filename)}/download`}
-                          download
-                        >
-                          Tải xuống
-                        </Button>
-                        <Button
-                          size="xs"
-                          color="red"
-                          variant="light"
-                          disabled={file.isLatest}
-                          onClick={() => setDeletingFile(file)}
-                        >
-                          Xóa
-                        </Button>
+                        <Tooltip label="Sửa tên file hoặc ghi chú" withArrow>
+                          <Button
+                            aria-label={`Sửa ghi chú file backup ${file.filename}`}
+                            size="xs"
+                            variant="default"
+                            px="xs"
+                            onClick={() => setEditingFile(file)}
+                          >
+                            <IconPencil {...iconProps} />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip label="Tải file backup xuống máy" withArrow>
+                          <Button
+                            aria-label={`Tải xuống file backup ${file.filename}`}
+                            size="xs"
+                            variant="light"
+                            component="a"
+                            px="xs"
+                            href={`/api/backups/${file.kind}/${encodeURIComponent(file.filename)}/download`}
+                            download
+                          >
+                            <IconDownload {...iconProps} />
+                          </Button>
+                        </Tooltip>
+                        <Tooltip label={file.isLatest ? 'Không thể xóa backup mới nhất' : 'Xóa file backup'} withArrow>
+                          <Button
+                            aria-label={`Xóa file backup ${file.filename}`}
+                            size="xs"
+                            color="red"
+                            variant="light"
+                            px="xs"
+                            disabled={file.isLatest}
+                            onClick={() => setDeletingFile(file)}
+                          >
+                            <IconTrash {...iconProps} />
+                          </Button>
+                        </Tooltip>
                       </Group>
                     </Table.Td>
                   </Table.Tr>

@@ -5,6 +5,10 @@ import { BackupPanel } from './BackupPanel';
 
 const mockUseServices = vi.fn();
 
+const mockBackups = vi.fn(() => []);
+const mockScheduledJobs = vi.fn(() => []);
+const mockScheduledRuns = vi.fn(() => []);
+
 vi.mock('@/hooks/useBackups', () => {
   const keys = {
     all: ['backups'] as const,
@@ -16,9 +20,9 @@ vi.mock('@/hooks/useBackups', () => {
   return {
     backupKeys: keys,
     useBackups: vi.fn(() => ({
-      backups: [],
-      scheduledJobs: [],
-      scheduledRuns: [],
+      backups: mockBackups(),
+      scheduledJobs: mockScheduledJobs(),
+      scheduledRuns: mockScheduledRuns(),
       settings: {
         mysqlRetentionDays: 14,
         mssqlRetentionDays: 14,
@@ -114,5 +118,67 @@ describe('BackupPanel routing', () => {
     expect(screen.getByRole('button', { name: 'Sao lưu MSSQL' }).hasAttribute('disabled')).toBe(
       true
     );
+  });
+
+  it('shows detailed generated backup notes and icon-only row actions', async () => {
+    mockBackups.mockReturnValue([
+      {
+        kind: 'mysql',
+        filename: 'mysql-20260612-030000.sql.gz',
+        size: 1024,
+        modifiedAt: '2026-06-12T03:00:30.000Z',
+        note: 'Tự động từ lịch MySQL · Hàng giờ #1',
+        source: 'generated',
+        uploadedAt: null,
+        isLatest: false,
+        generatedBy: {
+          runId: 'run_123',
+          jobId: 'job_456',
+          jobDisplayName: 'MySQL · Hàng giờ #1',
+          trigger: 'schedule',
+          batchId: null,
+          scheduledFor: '2026-06-12T03:00:00.000Z',
+          generatedAt: '2026-06-12T03:00:30.000Z',
+          scheduleSnapshot: { type: 'hourly', everyHours: 2, minute: 0 },
+        },
+      },
+    ] as any);
+
+    renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, {
+      route: '/backup/files',
+    });
+
+    expect(await screen.findByText('Tự động: MySQL · Hàng giờ · Mỗi 2 giờ, phút 00')).toBeTruthy();
+    expect(screen.getByText('Run: run_123')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Khôi phục file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sửa ghi chú file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Tải xuống file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xóa file backup mysql-20260612-030000.sql.gz' })).toBeTruthy();
+  });
+
+  it('shows detailed schedule names without sequence suffixes and icon-only schedule actions', async () => {
+    mockScheduledJobs.mockReturnValue([
+      {
+        id: 'job_1',
+        displayName: 'MySQL · Hàng giờ #1',
+        enabled: true,
+        taskType: 'backup',
+        database: 'mysql',
+        schedule: { type: 'hourly', everyHours: 2, minute: 0 },
+        nextRunPreviewAt: '2026-06-12T05:00:00.000Z',
+        createdAt: '2026-06-12T03:00:00.000Z',
+        updatedAt: '2026-06-12T03:00:00.000Z',
+      },
+    ] as any);
+
+    renderWithProviders(<BackupPanel onSuccess={vi.fn()} onError={vi.fn()} />, {
+      route: '/backup/schedule',
+    });
+
+    expect(await screen.findByText('MySQL · Hàng giờ · Mỗi 2 giờ, phút 00')).toBeTruthy();
+    expect(screen.queryByText('MySQL · Hàng giờ #1')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Chạy ngay lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sửa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Xóa lịch MySQL · Hàng giờ · Mỗi 2 giờ, phút 00' })).toBeTruthy();
   });
 });
