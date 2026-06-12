@@ -3,6 +3,14 @@ import { useState } from 'react';
 import { useBackups } from '@/hooks/useBackups';
 import type { ScheduledBackupJob } from '@/services/types';
 import { ScheduledJobModal } from './ScheduledJobModal';
+import {
+  IconCalendarPlus,
+  IconPencil,
+  IconPlayerPlay,
+  IconTrash,
+} from '@tabler/icons-react';
+import { useMediaQuery } from '@mantine/hooks';
+import { formatScheduleDisplayName } from '../utils/backupDisplay';
 
 type Props = {
   onError: (message: string) => void;
@@ -15,6 +23,9 @@ export function ScheduledJobsTab({ onError, onSuccess, databaseReadiness }: Prop
   const [editingJob, setEditingJob] = useState<ScheduledBackupJob | null>(null);
   const [modalOpened, setModalOpened] = useState(false);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
+
+  const isMobile = useMediaQuery('(max-width: 48em)');
+  const iconProps = { size: 16, stroke: 1.5 } as const;
 
   const handleCreate = () => {
     setEditingJob(null);
@@ -60,7 +71,9 @@ export function ScheduledJobsTab({ onError, onSuccess, databaseReadiness }: Prop
         <Text size="sm" c="dimmed">
           Quản lý lịch hẹn giờ sao lưu tự động cho database MySQL và MSSQL.
         </Text>
-        <Button onClick={handleCreate}>Thêm lịch hẹn giờ</Button>
+        <Button leftSection={<IconCalendarPlus {...iconProps} />} onClick={handleCreate}>
+          {isMobile ? null : 'Thêm lịch hẹn giờ'}
+        </Button>
       </Group>
 
       <Table striped highlightOnHover withTableBorder>
@@ -82,60 +95,74 @@ export function ScheduledJobsTab({ onError, onSuccess, databaseReadiness }: Prop
               </Table.Td>
             </Table.Tr>
           ) : (
-            scheduledJobs.map((job) => (
-              <Table.Tr key={job.id}>
-                <Table.Td>
-                  <Text fw={600}>{job.displayName}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Badge variant="light" color={job.database === 'mysql' ? 'blue' : 'red'}>
-                    {job.database.toUpperCase()}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>{job.summaryVi || job.schedule.type}</Table.Td>
-                <Table.Td>
-                  {job.nextRunPreviewAt
-                    ? new Date(job.nextRunPreviewAt).toLocaleString('vi-VN')
-                    : 'Không có'}
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={job.enabled ? 'green' : 'gray'}>
-                    {job.enabled ? 'Đang bật' : 'Đang tắt'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <Tooltip label="Chạy ngay lập tức" withArrow>
-                      <Button
-                        size="xs"
-                        variant="light"
-                        disabled={!databaseReadiness[job.database] || isActionLoading}
-                        onClick={() => handleRunNow(job.id)}
-                      >
-                        Chạy ngay
-                      </Button>
-                    </Tooltip>
-                    <Button
-                      size="xs"
-                      variant="default"
-                      disabled={isActionLoading}
-                      onClick={() => handleEdit(job)}
-                    >
-                      Sửa
-                    </Button>
-                    <Button
-                      size="xs"
-                      color="red"
-                      variant="light"
-                      disabled={isActionLoading}
-                      onClick={() => handleDelete(job.id)}
-                    >
-                      Xóa
-                    </Button>
-                  </Group>
-                </Table.Td>
-              </Table.Tr>
-            ))
+            scheduledJobs.map((job) => {
+              const scheduleDisplayName = formatScheduleDisplayName(job);
+
+              return (
+                <Table.Tr key={job.id}>
+                  <Table.Td>
+                    <Text fw={600}>{scheduleDisplayName}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge variant="light" color={job.database === 'mysql' ? 'blue' : 'red'}>
+                      {job.database.toUpperCase()}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>{job.summaryVi || job.schedule.type}</Table.Td>
+                  <Table.Td>
+                    {job.nextRunPreviewAt
+                      ? new Date(job.nextRunPreviewAt).toLocaleString('vi-VN')
+                      : 'Không có'}
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={job.enabled ? 'green' : 'gray'}>
+                      {job.enabled ? 'Đang bật' : 'Đang tắt'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <Tooltip label="Chạy lịch này ngay lập tức" withArrow>
+                        <Button
+                          aria-label={`Chạy ngay lịch ${scheduleDisplayName}`}
+                          size="xs"
+                          variant="light"
+                          px="xs"
+                          disabled={!databaseReadiness[job.database] || isActionLoading}
+                          onClick={() => handleRunNow(job.id)}
+                        >
+                          <IconPlayerPlay {...iconProps} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Sửa cấu hình lịch hẹn giờ" withArrow>
+                        <Button
+                          aria-label={`Sửa lịch ${scheduleDisplayName}`}
+                          size="xs"
+                          variant="default"
+                          px="xs"
+                          disabled={isActionLoading}
+                          onClick={() => handleEdit(job)}
+                        >
+                          <IconPencil {...iconProps} />
+                        </Button>
+                      </Tooltip>
+                      <Tooltip label="Xóa lịch hẹn giờ" withArrow>
+                        <Button
+                          aria-label={`Xóa lịch ${scheduleDisplayName}`}
+                          size="xs"
+                          color="red"
+                          variant="light"
+                          px="xs"
+                          disabled={isActionLoading}
+                          onClick={() => handleDelete(job.id)}
+                        >
+                          <IconTrash {...iconProps} />
+                        </Button>
+                      </Tooltip>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              );
+            })
           )}
         </Table.Tbody>
       </Table>
