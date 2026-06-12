@@ -16,8 +16,23 @@ export type BackupFileView = {
   generatedBy?: {
     runId: string | null;
     jobId: string | null;
-    trigger: 'schedule' | 'manual';
+    jobDisplayName?: string | null;
+    trigger: 'schedule' | 'manual' | 'retry';
     batchId: string | null;
+    scheduledFor?: string | null;
+    generatedAt?: string | null;
+    scheduleSnapshot?: {
+      type: 'hourly';
+      everyHours: number;
+      minute: number;
+    } | {
+      type: 'daily';
+      time: string;
+    } | {
+      type: 'weekly';
+      daysOfWeek: number[];
+      time: string;
+    } | null;
   } | null;
 };
 
@@ -132,8 +147,23 @@ function listKindFiles(
       generatedBy?: {
         runId: string | null;
         jobId: string | null;
-        trigger: 'schedule' | 'manual';
+        jobDisplayName?: string | null;
+        trigger: 'schedule' | 'manual' | 'retry';
         batchId: string | null;
+        scheduledFor?: string | null;
+        generatedAt?: string | null;
+        scheduleSnapshot?: {
+          type: 'hourly';
+          everyHours: number;
+          minute: number;
+        } | {
+          type: 'daily';
+          time: string;
+        } | {
+          type: 'weekly';
+          daysOfWeek: number[];
+          time: string;
+        } | null;
       } | null;
     }
   >

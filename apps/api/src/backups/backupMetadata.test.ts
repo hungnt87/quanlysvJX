@@ -35,8 +35,12 @@ describe('backup metadata', () => {
       generatedBy: {
         runId: 'run_123',
         jobId: 'job_456',
+        jobDisplayName: 'MySQL · Hàng giờ #1',
         trigger: 'schedule',
-        batchId: 'batch_789'
+        batchId: 'batch_789',
+        scheduledFor: '2026-06-10T03:00:00.000Z',
+        generatedAt: '2026-06-10T03:00:30.000Z',
+        scheduleSnapshot: { type: 'hourly', everyHours: 2, minute: 0 }
       }
     });
 
@@ -45,8 +49,12 @@ describe('backup metadata', () => {
     expect(index.files['mysql/mysql-20260610-030000.sql.gz']?.generatedBy).toEqual({
       runId: 'run_123',
       jobId: 'job_456',
+      jobDisplayName: 'MySQL · Hàng giờ #1',
       trigger: 'schedule',
-      batchId: 'batch_789'
+      batchId: 'batch_789',
+      scheduledFor: '2026-06-10T03:00:00.000Z',
+      generatedAt: '2026-06-10T03:00:30.000Z',
+      scheduleSnapshot: { type: 'hourly', everyHours: 2, minute: 0 }
     });
 
     upsertBackupMetadata(file, {

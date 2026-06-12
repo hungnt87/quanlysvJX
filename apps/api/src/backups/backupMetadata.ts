@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import { backupScheduleRuleSchema } from '../scheduledBackups/scheduledBackupTypes.js';
 import type { BackupKind } from './backupPaths.js';
 
 const metadataSchema = z.object({
@@ -18,8 +19,12 @@ const metadataSchema = z.object({
         .object({
           runId: z.string().nullable(),
           jobId: z.string().nullable(),
-          trigger: z.enum(['schedule', 'manual']),
-          batchId: z.string().nullable()
+          jobDisplayName: z.string().nullable().optional(),
+          trigger: z.enum(['schedule', 'manual', 'retry']),
+          batchId: z.string().nullable(),
+          scheduledFor: z.string().nullable().optional(),
+          generatedAt: z.string().nullable().optional(),
+          scheduleSnapshot: backupScheduleRuleSchema.nullable().optional()
         })
         .nullable()
         .optional()
