@@ -89,6 +89,8 @@ Neu chua kich hoat phien ban game, Dashboard se khong cho chay cac dich vu game.
 Vao `Cai dat` de cau hinh IP game.
 
 - `Game server IP`: chon IP that cua may chu trong mang LAN.
+- Neu muon choi tu ngoai Internet qua VPN, chon IP VPN cua may chu thay vi IP LAN.
+- May choi game cung can ket noi vao cung VPN va truy cap server bang IP VPN nay.
 - `MySQL IP`, `Paysys IP`, `MSSQL IP`: thuong de `127.0.0.1` khi chay tat ca tren cung may.
 
 Sau khi luu cau hinh IP, restart cac dich vu dang chay de cau hinh moi co hieu luc.
