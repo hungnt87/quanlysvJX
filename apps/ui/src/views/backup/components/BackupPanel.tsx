@@ -8,8 +8,9 @@ import {
 import { useServices } from '@/hooks/useServices';
 import type { BackupKind } from '@/services/types';
 import { BackupFilesTab } from './BackupFilesTab';
-import { BackupJobsTab } from './BackupJobsTab';
-import { BackupScheduleTab } from './BackupScheduleTab';
+import { ScheduledJobsTab } from './ScheduledJobsTab';
+import { ScheduledRunsTab } from './ScheduledRunsTab';
+import { BackupSettingsTab } from './BackupSettingsTab';
 
 type Props = {
   onSuccess: (message: string) => void;
@@ -20,9 +21,10 @@ const backupRoutes = new Map([
   ['files', '/backup/files'],
   ['schedule', '/backup/schedule'],
   ['jobs', '/backup/jobs'],
+  ['settings', '/backup/settings'],
 ]);
 
-type BackupTab = 'files' | 'schedule' | 'jobs';
+type BackupTab = 'files' | 'schedule' | 'jobs' | 'settings';
 type DatabaseReadiness = Record<BackupKind, boolean>;
 
 function getActiveBackupTab(pathname: string): BackupTab | null {
@@ -38,6 +40,9 @@ function getActiveBackupTab(pathname: string): BackupTab | null {
   if (pathname.startsWith('/backup/files')) {
     return 'files';
   }
+  if (pathname.startsWith('/backup/settings')) {
+    return 'settings';
+  }
   return null;
 }
 
@@ -49,7 +54,7 @@ function renderBackupTab(
 ) {
   if (tab === 'schedule') {
     return (
-      <BackupScheduleTab
+      <ScheduledJobsTab
         databaseReadiness={databaseReadiness}
         onSuccess={onSuccess}
         onError={onError}
@@ -57,7 +62,20 @@ function renderBackupTab(
     );
   }
   if (tab === 'jobs') {
-    return <BackupJobsTab onError={onError} />;
+    return (
+      <ScheduledRunsTab
+        onSuccess={onSuccess}
+        onError={onError}
+      />
+    );
+  }
+  if (tab === 'settings') {
+    return (
+      <BackupSettingsTab
+        onSuccess={onSuccess}
+        onError={onError}
+      />
+    );
   }
   return (
     <BackupFilesTab databaseReadiness={databaseReadiness} onSuccess={onSuccess} onError={onError} />
@@ -88,9 +106,10 @@ export function BackupPanel({ onSuccess, onError }: Props) {
         keepMounted={false}
       >
         <Tabs.List my="md">
-          <Tabs.Tab value="files">Files</Tabs.Tab>
-          <Tabs.Tab value="schedule">Schedule</Tabs.Tab>
-          <Tabs.Tab value="jobs">Jobs</Tabs.Tab>
+          <Tabs.Tab value="files">File backup</Tabs.Tab>
+          <Tabs.Tab value="schedule">Lịch hẹn giờ</Tabs.Tab>
+          <Tabs.Tab value="jobs">Lịch sử</Tabs.Tab>
+          <Tabs.Tab value="settings">Cài đặt</Tabs.Tab>
         </Tabs.List>
       </Tabs>
       {renderBackupTab(activeTab, onSuccess, onError, databaseReadiness)}

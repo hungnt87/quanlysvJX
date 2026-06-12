@@ -13,6 +13,12 @@ export type BackupFileView = {
   source: 'generated' | 'uploaded';
   uploadedAt: string | null;
   isLatest: boolean;
+  generatedBy?: {
+    runId: string | null;
+    jobId: string | null;
+    trigger: 'schedule' | 'manual';
+    batchId: string | null;
+  } | null;
 };
 
 type FileDeps = {
@@ -117,7 +123,20 @@ export function deleteBackupFile(args: FileDeps & { kind: BackupKind; filename: 
 function listKindFiles(
   kind: BackupKind,
   deps: FileDeps,
-  metadataFiles: Record<string, { note: string | null; createdByUpload: boolean; uploadedAt: string | null }>
+  metadataFiles: Record<
+    string,
+    {
+      note: string | null;
+      createdByUpload: boolean;
+      uploadedAt: string | null;
+      generatedBy?: {
+        runId: string | null;
+        jobId: string | null;
+        trigger: 'schedule' | 'manual';
+        batchId: string | null;
+      } | null;
+    }
+  >
 ) {
   const directory = getBackupDirectory(kind, deps);
   if (!existsSync(directory)) {
@@ -144,6 +163,7 @@ function listKindFiles(
         note: metadata?.note ?? null,
         source: metadata?.createdByUpload ? 'uploaded' : 'generated',
         uploadedAt: metadata?.uploadedAt ?? null,
+        generatedBy: metadata?.generatedBy ?? null,
         isLatest: false
       } satisfies BackupFileView;
     })

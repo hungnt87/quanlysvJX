@@ -14,6 +14,10 @@ function testConfig(root: string): ManagerConfig {
     backupRetentionDays: 14,
     backupMetadataFile: path.join(root, 'backup-metadata.json'),
     backupScheduleFile: path.join(root, 'backup-schedules.json'),
+    scheduledBackupJobsFile: path.join(root, 'backup-scheduled-jobs.json'),
+    scheduledBackupRunsFile: path.join(root, 'backup-scheduled-job-runs.json'),
+    mysqlRetentionDays: 14,
+    mssqlRetentionDays: 14,
     schedulerEnabled: false,
     mssql: {
       host: 'localhost',
@@ -28,7 +32,7 @@ function testConfig(root: string): ManagerConfig {
 }
 
 describe('backup routes', () => {
-  it('starts mysql backup job', async () => {
+  it('enqueues mysql backup job', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'manager-'));
     const app = await buildApp({
       config: testConfig(root),
@@ -38,7 +42,8 @@ describe('backup routes', () => {
     const response = await app.inject({ method: 'POST', url: '/api/backups/mysql' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json().data.kind).toBe('mysql');
+    expect(response.json().data.database).toBe('mysql');
+    expect(response.json().data.status).toBe('queued');
   });
 
   it('lists managed backup files', async () => {
@@ -85,7 +90,7 @@ describe('backup routes', () => {
     expect(response.json().error).toContain('Cannot delete the newest mysql backup');
   });
 
-  it('saves and returns backup schedules', async () => {
+  it('returns 404 for deleted backup schedules routes', async () => {
     const root = mkdtempSync(path.join(tmpdir(), 'manager-'));
     const app = await buildApp({ config: testConfig(root) });
 
@@ -96,41 +101,8 @@ describe('backup routes', () => {
     });
     const get = await app.inject({ method: 'GET', url: '/api/backup-schedules' });
 
-    expect(put.statusCode).toBe(200);
-    expect(get.json().data.schedules.mysql.enabled).toBe(true);
-  });
-
-  it('returns backup scheduler runtime status with schedules', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'manager-'));
-    const config = { ...testConfig(root), schedulerEnabled: true };
-    const app = await buildApp({ config });
-
-    const response = await app.inject({ method: 'GET', url: '/api/backup-schedules' });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json().data).toMatchObject({
-      scheduler: { enabled: true },
-      status: {
-        mysql: { lastRunAt: null, nextRunAt: null, scheduledToday: false, runsToday: false },
-        mssql: { lastRunAt: null, nextRunAt: null, scheduledToday: false, runsToday: false }
-      }
-    });
-  });
-
-  it('returns readonly backup settings', async () => {
-    const root = mkdtempSync(path.join(tmpdir(), 'manager-'));
-    const config = testConfig(root);
-    const app = await buildApp({ config });
-
-    const response = await app.inject({ method: 'GET', url: '/api/backup-settings' });
-
-    expect(response.statusCode).toBe(200);
-    expect(response.json().data).toMatchObject({
-      mysqlBackupDir: config.mysqlBackupDir,
-      mssqlBackupDir: config.mssqlBackupDir,
-      backupMetadataFile: config.backupMetadataFile,
-      backupScheduleFile: config.backupScheduleFile
-    });
+    expect(put.statusCode).toBe(404);
+    expect(get.statusCode).toBe(404);
   });
 
   it('rejects restore traversal filename', async () => {

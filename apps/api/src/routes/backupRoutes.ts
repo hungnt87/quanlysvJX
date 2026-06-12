@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
 import type { Multipart, MultipartValue } from '@fastify/multipart';
 import { z } from 'zod';
@@ -7,21 +8,13 @@ import { ok } from '../api/envelope.js';
 import { deleteBackupFile, listBackupFiles, renameBackupFile, writeUploadedBackupFile } from '../backups/backupFiles.js';
 import { backupJobStore, type StartJobInput } from '../backups/backupJobs.js';
 import { getBackupDirectory, assertBackupFile } from '../backups/backupPaths.js';
-import { getBackupScheduleRuntimeStatus, readBackupSchedules, updateBackupSchedule } from '../backups/backupSchedules.js';
-import { backupMssql, restoreMssql } from '../backups/mssqlBackup.js';
-import { backupMysql, restoreMysql } from '../backups/mysqlBackup.js';
+import { restoreMssql } from '../backups/mssqlBackup.js';
+import { restoreMysql } from '../backups/mysqlBackup.js';
+import { enqueueScheduledBackupRun } from '../scheduledBackups/scheduledBackupRuns.js';
 
 const kindSchema = z.enum(['mysql', 'mssql']);
 const restoreSchema = z.object({ filename: z.string().min(1) });
 const updateBackupSchema = z.object({ filename: z.string().min(1), note: z.string().nullable() });
-const daySchema = z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5), z.literal(6)]);
-const scheduleSchema = z.object({
-  enabled: z.boolean(),
-  daysOfWeek: z.array(daySchema),
-  time: z.string().regex(/^\d{2}:\d{2}$/),
-  retentionDays: z.number().int().min(1),
-  lastRunKey: z.string().nullable()
-});
 
 export async function registerBackupRoutes(app: FastifyInstance) {
   app.get('/api/backups', async () => ok(listBackupFiles(app.deps.config)));
@@ -41,14 +34,74 @@ export async function registerBackupRoutes(app: FastifyInstance) {
 
   app.get('/api/jobs', async () => ok(backupJobStore.listJobs()));
 
-  app.post('/api/backups/mysql', async () => ok(await runJob({ kind: 'backup', database: 'mysql', trigger: 'manual' }, () => backupMysql(app.deps))));
-  app.post('/api/backups/mssql', async () => ok(await runJob({ kind: 'backup', database: 'mssql', trigger: 'manual' }, () => backupMssql(app.deps))));
-  app.post('/api/backups/all', async () =>
-    ok({
-      mysql: await runJob({ kind: 'backup', database: 'mysql', trigger: 'manual' }, () => backupMysql(app.deps)),
-      mssql: await runJob({ kind: 'backup', database: 'mssql', trigger: 'manual' }, () => backupMssql(app.deps))
-    })
-  );
+  app.post('/api/backups/mysql', async () => {
+    const run = enqueueScheduledBackupRun(
+      app.deps.config.scheduledBackupRunsFile!,
+      {
+        jobId: null,
+        jobDisplayName: null,
+        database: 'mysql',
+        trigger: 'manual',
+        scheduledFor: new Date().toISOString(),
+        scheduleSnapshot: null
+      },
+      app.deps.config.maxQueuedRunsPerJob,
+      app.deps.config.maxFinishedScheduledRuns
+    );
+    return ok(run);
+  });
+
+  app.post('/api/backups/mssql', async () => {
+    const run = enqueueScheduledBackupRun(
+      app.deps.config.scheduledBackupRunsFile!,
+      {
+        jobId: null,
+        jobDisplayName: null,
+        database: 'mssql',
+        trigger: 'manual',
+        scheduledFor: new Date().toISOString(),
+        scheduleSnapshot: null
+      },
+      app.deps.config.maxQueuedRunsPerJob,
+      app.deps.config.maxFinishedScheduledRuns
+    );
+    return ok(run);
+  });
+
+  app.post('/api/backups/all', async () => {
+    const batchId = `batch_${crypto.randomUUID()}`;
+    const mysqlRun = enqueueScheduledBackupRun(
+      app.deps.config.scheduledBackupRunsFile!,
+      {
+        jobId: null,
+        jobDisplayName: null,
+        database: 'mysql',
+        trigger: 'manual',
+        scheduledFor: new Date().toISOString(),
+        scheduleSnapshot: null,
+        batchId
+      },
+      app.deps.config.maxQueuedRunsPerJob,
+      app.deps.config.maxFinishedScheduledRuns
+    );
+
+    const mssqlRun = enqueueScheduledBackupRun(
+      app.deps.config.scheduledBackupRunsFile!,
+      {
+        jobId: null,
+        jobDisplayName: null,
+        database: 'mssql',
+        trigger: 'manual',
+        scheduledFor: new Date().toISOString(),
+        scheduleSnapshot: null,
+        batchId
+      },
+      app.deps.config.maxQueuedRunsPerJob,
+      app.deps.config.maxFinishedScheduledRuns
+    );
+
+    return ok({ mysql: mysqlRun, mssql: mssqlRun });
+  });
 
   app.post('/api/backups/:kind/upload', async (request) => {
     const { kind } = request.params as { kind: string };
@@ -98,30 +151,6 @@ export async function registerBackupRoutes(app: FastifyInstance) {
     assertBackupFile(getBackupDirectory('mssql', app.deps.config), filename);
     return ok(await runJob({ kind: 'restore', database: 'mssql', trigger: 'restore' }, () => restoreMssql(app.deps, filename)));
   });
-
-  app.get('/api/backup-schedules', async () =>
-    ok(
-      getBackupScheduleRuntimeStatus(readBackupSchedules(app.deps.config.backupScheduleFile), {
-        schedulerEnabled: app.deps.config.schedulerEnabled
-      })
-    )
-  );
-
-  app.put('/api/backup-schedules/:kind', async (request) => {
-    const { kind } = request.params as { kind: string };
-    const parsedKind = kindSchema.parse(kind);
-    const schedule = scheduleSchema.parse(request.body);
-    return ok(updateBackupSchedule(app.deps.config.backupScheduleFile, parsedKind, schedule));
-  });
-
-  app.get('/api/backup-settings', async () =>
-    ok({
-      mysqlBackupDir: app.deps.config.mysqlBackupDir,
-      mssqlBackupDir: app.deps.config.mssqlBackupDir,
-      backupMetadataFile: app.deps.config.backupMetadataFile,
-      backupScheduleFile: app.deps.config.backupScheduleFile
-    })
-  );
 }
 
 function readMultipartTextField(field: Multipart | Multipart[] | undefined) {

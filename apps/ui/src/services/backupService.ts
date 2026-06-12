@@ -2,12 +2,11 @@ import ApiService from './base/apiService';
 import type {
   BackupList,
   BackupFile,
-  BackupJob,
-  BackupScheduleConfig,
-  DatabaseBackupSchedule,
   BackupSettings,
   BackupKind,
   UploadBackupPayload,
+  ScheduledBackupJob,
+  ScheduledBackupRun,
 } from './types';
 
 export const backupService = {
@@ -19,7 +18,7 @@ export const backupService = {
     return res.data;
   },
   createBackup: async (kind: BackupKind | 'all') => {
-    const res = await ApiService.fetchData<any, unknown>({
+    const res = await ApiService.fetchData<any, ScheduledBackupRun[]>({
       url: `/api/backups/${kind}`,
       method: 'POST',
     });
@@ -65,25 +64,57 @@ export const backupService = {
     });
     return res.data;
   },
-  getJobs: async () => {
-    const res = await ApiService.fetchData<any, BackupJob[]>({
-      url: '/api/jobs',
+  getScheduledJobs: async () => {
+    const res = await ApiService.fetchData<any, ScheduledBackupJob[]>({
+      url: '/api/scheduled-jobs',
       method: 'GET',
     });
     return res.data;
   },
-  getSchedules: async () => {
-    const res = await ApiService.fetchData<any, BackupScheduleConfig>({
-      url: '/api/backup-schedules',
-      method: 'GET',
+  createScheduledJob: async (payload: Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>) => {
+    const res = await ApiService.fetchData<any, ScheduledBackupJob>({
+      url: '/api/scheduled-jobs',
+      method: 'POST',
+      data: payload,
     });
     return res.data;
   },
-  saveSchedule: async (kind: BackupKind, schedule: DatabaseBackupSchedule) => {
-    const res = await ApiService.fetchData<any, BackupScheduleConfig>({
-      url: `/api/backup-schedules/${kind}`,
+  updateScheduledJob: async (
+    id: string,
+    payload: Partial<Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>>
+  ) => {
+    const res = await ApiService.fetchData<any, ScheduledBackupJob>({
+      url: `/api/scheduled-jobs/${id}`,
       method: 'PUT',
-      data: schedule,
+      data: payload,
+    });
+    return res.data;
+  },
+  deleteScheduledJob: async (id: string) => {
+    const res = await ApiService.fetchData<any, ScheduledBackupJob>({
+      url: `/api/scheduled-jobs/${id}`,
+      method: 'DELETE',
+    });
+    return res.data;
+  },
+  runScheduledJobNow: async (id: string) => {
+    const res = await ApiService.fetchData<any, ScheduledBackupRun>({
+      url: `/api/scheduled-jobs/${id}/run`,
+      method: 'POST',
+    });
+    return res.data;
+  },
+  getScheduledRuns: async () => {
+    const res = await ApiService.fetchData<any, ScheduledBackupRun[]>({
+      url: '/api/scheduled-job-runs',
+      method: 'GET',
+    });
+    return res.data;
+  },
+  retryScheduledRun: async (runId: string) => {
+    const res = await ApiService.fetchData<any, ScheduledBackupRun>({
+      url: `/api/scheduled-job-runs/${runId}/retry`,
+      method: 'POST',
     });
     return res.data;
   },
@@ -91,6 +122,14 @@ export const backupService = {
     const res = await ApiService.fetchData<any, BackupSettings>({
       url: '/api/backup-settings',
       method: 'GET',
+    });
+    return res.data;
+  },
+  saveBackupSettings: async (payload: BackupSettings) => {
+    const res = await ApiService.fetchData<any, BackupSettings>({
+      url: '/api/backup-settings',
+      method: 'PUT',
+      data: payload,
     });
     return res.data;
   },

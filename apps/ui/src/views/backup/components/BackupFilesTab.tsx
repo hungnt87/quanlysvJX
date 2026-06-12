@@ -273,7 +273,13 @@ export function BackupFilesTab({ databaseReadiness, onSuccess, onError }: Props)
                     <Table.Td>{formatDate(file.modifiedAt)}</Table.Td>
                     <Table.Td>{file.note ?? '-'}</Table.Td>
                     <Table.Td>
-                      {file.source === 'uploaded' ? 'Tải lên' : 'Tạo bởi hệ thống'}
+                      {file.source === 'uploaded' ? (
+                        <Badge color="cyan" variant="outline">Tải lên</Badge>
+                      ) : file.generatedBy?.trigger === 'schedule' ? (
+                        <Badge color="indigo" variant="outline">Từ lịch hẹn giờ</Badge>
+                      ) : (
+                        <Badge color="teal" variant="outline">Thủ công</Badge>
+                      )}
                     </Table.Td>
                     <Table.Td>
                       <Group gap="xs">

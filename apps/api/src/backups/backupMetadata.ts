@@ -13,7 +13,16 @@ const metadataSchema = z.object({
       note: z.string().nullable(),
       createdByUpload: z.boolean(),
       uploadedAt: z.string().nullable(),
-      updatedAt: z.string()
+      updatedAt: z.string(),
+      generatedBy: z
+        .object({
+          runId: z.string().nullable(),
+          jobId: z.string().nullable(),
+          trigger: z.enum(['schedule', 'manual']),
+          batchId: z.string().nullable()
+        })
+        .nullable()
+        .optional()
     })
   )
 });

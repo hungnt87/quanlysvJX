@@ -18,6 +18,12 @@ export type ManagerConfig = {
   backupRetentionDays: number;
   backupMetadataFile: string;
   backupScheduleFile: string;
+  scheduledBackupJobsFile?: string;
+  scheduledBackupRunsFile?: string;
+  mysqlRetentionDays?: number;
+  mssqlRetentionDays?: number;
+  maxQueuedRunsPerJob?: number;
+  maxFinishedScheduledRuns?: number;
   schedulerEnabled: boolean;
   mssql: MssqlConfig;
 };
@@ -34,6 +40,12 @@ export function loadConfig(env = process.env): ManagerConfig {
     backupRetentionDays: Number(env.BACKUP_RETENTION_DAYS ?? '14'),
     backupMetadataFile: path.resolve(projectRoot, env.BACKUP_METADATA_FILE ?? path.join(backupRoot, 'backup-metadata.json')),
     backupScheduleFile: path.resolve(projectRoot, env.BACKUP_SCHEDULE_FILE ?? path.join(backupRoot, 'backup-schedules.json')),
+    scheduledBackupJobsFile: path.resolve(projectRoot, env.SCHEDULED_BACKUP_JOBS_FILE ?? path.join(backupRoot, 'backup-scheduled-jobs.json')),
+    scheduledBackupRunsFile: path.resolve(projectRoot, env.SCHEDULED_BACKUP_RUNS_FILE ?? path.join(backupRoot, 'backup-scheduled-job-runs.json')),
+    mysqlRetentionDays: Number(env.MYSQL_RETENTION_DAYS ?? env.BACKUP_RETENTION_DAYS ?? '14'),
+    mssqlRetentionDays: Number(env.MSSQL_RETENTION_DAYS ?? env.BACKUP_RETENTION_DAYS ?? '14'),
+    maxQueuedRunsPerJob: Number(env.MAX_QUEUED_RUNS_PER_JOB ?? '100'),
+    maxFinishedScheduledRuns: Number(env.MAX_FINISHED_SCHEDULED_RUNS ?? '1000'),
     schedulerEnabled: env.BACKUP_SCHEDULER_ENABLED === 'true',
     mssql: {
       host: normalizeMssqlHost(env.MSSQL_HOST ?? env.JX_MSSQL_IP),

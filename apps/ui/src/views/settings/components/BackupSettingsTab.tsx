@@ -1,8 +1,7 @@
 import { Alert, Stack, Table, Text } from '@mantine/core';
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
-import { backupKeys } from '@/hooks/useBackups';
-import { backupService } from '@/services/backupService';
+import { legacyBackupService } from '@/services/legacyBackupService';
 
 type Props = {
   onError: (message: string) => void;
@@ -10,8 +9,8 @@ type Props = {
 
 export function BackupSettingsTab({ onError }: Props) {
   const settingsQuery = useQuery({
-    queryKey: backupKeys.settings(),
-    queryFn: backupService.getBackupSettings,
+    queryKey: ['backups', 'legacy-settings'],
+    queryFn: legacyBackupService.getLegacySettings,
   });
   const settings = settingsQuery.data;
 

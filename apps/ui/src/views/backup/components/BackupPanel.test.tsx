@@ -3,75 +3,38 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderWithProviders } from '@/utils/test/renderWithProviders';
 import { BackupPanel } from './BackupPanel';
 
-const mockSchedules = {
-  version: 1,
-  scheduler: {
-    enabled: true,
-    serverTime: '2026-06-12T01:00:00.000Z',
-  },
-  schedules: {
-    mysql: {
-      enabled: false,
-      daysOfWeek: [],
-      time: '03:00',
-      retentionDays: 14,
-      lastRunKey: null,
-    },
-    mssql: {
-      enabled: false,
-      daysOfWeek: [],
-      time: '03:30',
-      retentionDays: 14,
-      lastRunKey: null,
-    },
-  },
-  status: {
-    mysql: {
-      lastRunAt: '2026-06-11T20:00:00.000Z',
-      nextRunAt: '2026-06-18T20:00:00.000Z',
-      scheduledToday: true,
-      runsToday: false,
-    },
-    mssql: {
-      lastRunAt: null,
-      nextRunAt: null,
-      scheduledToday: false,
-      runsToday: false,
-    },
-  },
-};
-
-const mockSettings = {
-  mysqlBackupDir: '/mysql',
-  mssqlBackupDir: '/mssql',
-  backupMetadataFile: '/backup-metadata.json',
-  backupScheduleFile: '/backup-schedules.json',
-};
-
 const mockUseServices = vi.fn();
 
 vi.mock('@/hooks/useBackups', () => {
   const keys = {
     all: ['backups'] as const,
     lists: () => ['backups', 'list'] as const,
-    jobs: () => ['backups', 'jobs'] as const,
-    schedules: () => ['backups', 'schedules'] as const,
+    scheduledJobs: () => ['backups', 'scheduledJobs'] as const,
+    scheduledRuns: () => ['backups', 'scheduledRuns'] as const,
     settings: () => ['backups', 'settings'] as const,
   };
   return {
     backupKeys: keys,
     useBackups: vi.fn(() => ({
       backups: [],
-      jobs: [],
-      schedules: mockSchedules,
-      settings: mockSettings,
+      scheduledJobs: [],
+      scheduledRuns: [],
+      settings: {
+        mysqlRetentionDays: 14,
+        mssqlRetentionDays: 14,
+      },
       isLoading: false,
       createBackup: vi.fn(),
       uploadBackup: vi.fn(),
       updateBackup: vi.fn(),
       deleteBackup: vi.fn(),
       restoreBackup: vi.fn(),
-      saveSchedule: vi.fn(),
+      createScheduledJob: vi.fn(),
+      updateScheduledJob: vi.fn(),
+      deleteScheduledJob: vi.fn(),
+      runScheduledJobNow: vi.fn(),
+      retryScheduledRun: vi.fn(),
+      saveBackupSettings: vi.fn(),
     })),
   };
 });
@@ -82,7 +45,10 @@ vi.mock('@/hooks/useServices', () => ({
 
 vi.mock('@/services/backupService', () => ({
   backupService: {
-    getJobs: vi.fn().mockResolvedValue([]),
+    getBackups: vi.fn().mockResolvedValue([]),
+    getScheduledJobs: vi.fn().mockResolvedValue([]),
+    getScheduledRuns: vi.fn().mockResolvedValue([]),
+    getBackupSettings: vi.fn().mockResolvedValue({ mysqlRetentionDays: 14, mssqlRetentionDays: 14 }),
   },
 }));
 
@@ -106,14 +72,12 @@ describe('BackupPanel routing', () => {
       route: '/backup/schedule',
     });
 
-    expect(await screen.findByRole('tab', { name: 'Files' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Schedule' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Jobs' })).toBeTruthy();
-    expect(screen.getByRole('tab', { name: 'Schedule' }).getAttribute('aria-selected')).toBe(
+    expect(await screen.findByRole('tab', { name: 'File backup' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Lịch hẹn giờ' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Lịch sử' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Lịch hẹn giờ' }).getAttribute('aria-selected')).toBe(
       'true'
     );
-    expect(screen.getByText('Bộ lập lịch đang bật')).toBeTruthy();
-    expect(screen.getAllByText('Lần chạy kế tiếp').length).toBeGreaterThan(0);
   });
 
   it('navigates to jobs when Jobs tab is clicked', async () => {
@@ -121,9 +85,9 @@ describe('BackupPanel routing', () => {
       route: '/backup/files',
     });
 
-    fireEvent.click(await screen.findByRole('tab', { name: 'Jobs' }));
+    fireEvent.click(await screen.findByRole('tab', { name: 'Lịch sử' }));
 
-    expect(screen.getByRole('tab', { name: 'Jobs' }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.getByRole('tab', { name: 'Lịch sử' }).getAttribute('aria-selected')).toBe('true');
   });
 
   it('warns and disables only unavailable backup actions when a database is not healthy', async () => {

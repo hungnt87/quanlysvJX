@@ -47,6 +47,12 @@ export type BackupFile = {
   source: 'generated' | 'uploaded';
   uploadedAt: string | null;
   isLatest: boolean;
+  generatedBy?: {
+    runId: string | null;
+    jobId: string | null;
+    trigger: 'schedule' | 'manual';
+    batchId: string | null;
+  } | null;
 };
 
 export type BackupList = BackupFile[];
@@ -77,22 +83,44 @@ export type BackupScheduleConfig = {
   >;
 };
 
-export type BackupJob = {
+export type BackupScheduleRule =
+  | { type: 'hourly'; everyHours: number; minute: number }
+  | { type: 'daily'; time: string }
+  | { type: 'weekly'; daysOfWeek: number[]; time: string };
+
+export type ScheduledBackupJob = {
   id: string;
-  kind: string;
-  database: BackupKind | 'all' | null;
-  trigger: 'manual' | 'schedule' | 'restore' | 'upload';
-  status: 'running' | 'succeeded' | 'failed';
-  startedAt: string;
+  displayName: string;
+  enabled: boolean;
+  taskType: 'backup';
+  database: BackupKind;
+  schedule: BackupScheduleRule;
+  nextRunPreviewAt?: string | null;
+  summaryVi?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ScheduledBackupRun = {
+  runId: string;
+  batchId: string | null;
+  jobId: string;
+  jobDisplayName: string;
+  database: BackupKind;
+  trigger: 'schedule' | 'manual';
+  scheduledFor: string;
+  queuedAt: string;
+  startedAt: string | null;
   finishedAt: string | null;
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'skipped';
   error: string | null;
+  backupFilename: string | null;
+  scheduleSnapshot: BackupScheduleRule;
 };
 
 export type BackupSettings = {
-  mysqlBackupDir: string;
-  mssqlBackupDir: string;
-  backupMetadataFile: string;
-  backupScheduleFile: string;
+  mysqlRetentionDays: number;
+  mssqlRetentionDays: number;
 };
 
 export type GameAccountStatus = 'active' | 'banned';

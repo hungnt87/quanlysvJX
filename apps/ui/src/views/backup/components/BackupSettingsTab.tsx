@@ -1,63 +1,76 @@
-import { Alert, Stack, Table, Text } from '@mantine/core';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
-import { backupKeys } from '@/hooks/useBackups';
-import { backupService } from '@/services/backupService';
+import { Alert, Stack, Text, NumberInput, Button, Group } from '@mantine/core';
+import { useForm } from '@mantine/form';
+import { useEffect } from 'react';
+import { useBackups } from '@/hooks/useBackups';
 
 type Props = {
   onError: (message: string) => void;
+  onSuccess: (message: string) => void;
 };
 
-export function BackupSettingsTab({ onError }: Props) {
-  const settingsQuery = useQuery({
-    queryKey: backupKeys.settings(),
-    queryFn: backupService.getBackupSettings,
+export function BackupSettingsTab({ onError, onSuccess }: Props) {
+  const { settings, saveBackupSettings, isActionLoading } = useBackups();
+
+  const form = useForm({
+    initialValues: {
+      mysqlRetentionDays: 14,
+      mssqlRetentionDays: 14,
+    },
+    validate: {
+      mysqlRetentionDays: (value) => (value < 1 ? 'Số ngày giữ tối thiểu là 1 ngày' : null),
+      mssqlRetentionDays: (value) => (value < 1 ? 'Số ngày giữ tối thiểu là 1 ngày' : null),
+    },
   });
-  const settings = settingsQuery.data;
-
-  const onErrorRef = useRef(onError);
-  useEffect(() => {
-    onErrorRef.current = onError;
-  }, [onError]);
 
   useEffect(() => {
-    if (settingsQuery.isError) {
-      onErrorRef.current(
-        settingsQuery.error instanceof Error
-          ? settingsQuery.error.message
-          : 'Unable to load backup settings'
-      );
+    if (settings) {
+      form.setValues({
+        mysqlRetentionDays: settings.mysqlRetentionDays,
+        mssqlRetentionDays: settings.mssqlRetentionDays,
+      });
     }
-  }, [settingsQuery.error, settingsQuery.isError]);
+  }, [settings]);
+
+  const handleSubmit = (values: typeof form.values) => {
+    saveBackupSettings(values)
+      .then(() => {
+        onSuccess('Đã cập nhật cài đặt lưu trữ thành công');
+      })
+      .catch((err) => {
+        onError(err instanceof Error ? err.message : 'Không thể lưu cài đặt');
+      });
+  };
 
   if (!settings) {
-    return <Text c="dimmed">Loading backup settings...</Text>;
+    return <Text c="dimmed">Đang tải cài đặt...</Text>;
   }
 
   return (
     <Stack gap="md">
-      <Alert color="blue">Backup paths are managed by server environment configuration.</Alert>
-      <Table withTableBorder>
-        <Table.Tbody>
-          <SettingRow label="MySQL backup directory" value={settings.mysqlBackupDir} />
-          <SettingRow label="MSSQL backup directory" value={settings.mssqlBackupDir} />
-          <SettingRow label="Metadata file" value={settings.backupMetadataFile} />
-          <SettingRow label="Schedule file" value={settings.backupScheduleFile} />
-        </Table.Tbody>
-      </Table>
+      <Alert color="blue">
+        Cấu hình số ngày lưu trữ (Retention Days) cho các file sao lưu tự động của từng loại cơ sở dữ liệu.
+      </Alert>
+      <form onSubmit={form.onSubmit(handleSubmit)}>
+        <Stack gap="sm">
+          <NumberInput
+            label="Số ngày lưu trữ file backup MySQL"
+            min={1}
+            disabled={isActionLoading}
+            {...form.getInputProps('mysqlRetentionDays')}
+          />
+          <NumberInput
+            label="Số ngày lưu trữ file backup MSSQL"
+            min={1}
+            disabled={isActionLoading}
+            {...form.getInputProps('mssqlRetentionDays')}
+          />
+          <Group justify="flex-end" mt="md">
+            <Button type="submit" loading={isActionLoading}>
+              Lưu cài đặt
+            </Button>
+          </Group>
+        </Stack>
+      </form>
     </Stack>
-  );
-}
-
-function SettingRow({ label, value }: { label: string; value: string }) {
-  return (
-    <Table.Tr>
-      <Table.Th w={260}>{label}</Table.Th>
-      <Table.Td>
-        <Text ff="monospace" size="sm">
-          {value}
-        </Text>
-      </Table.Td>
-    </Table.Tr>
   );
 }

@@ -1,12 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { backupService } from '@/services/backupService';
-import type { BackupKind, DatabaseBackupSchedule, UploadBackupPayload } from '@/services/types';
+import type { BackupKind, UploadBackupPayload, ScheduledBackupJob, BackupSettings } from '@/services/types';
 
 export const backupKeys = {
   all: ['backups'] as const,
   lists: () => [...backupKeys.all, 'list'] as const,
-  jobs: () => [...backupKeys.all, 'jobs'] as const,
-  schedules: () => [...backupKeys.all, 'schedules'] as const,
+  scheduledJobs: () => [...backupKeys.all, 'scheduledJobs'] as const,
+  scheduledRuns: () => [...backupKeys.all, 'scheduledRuns'] as const,
   settings: () => [...backupKeys.all, 'settings'] as const,
 };
 
@@ -18,14 +18,14 @@ export const useBackups = () => {
     queryFn: backupService.getBackups,
   });
 
-  const jobsQuery = useQuery({
-    queryKey: backupKeys.jobs(),
-    queryFn: backupService.getJobs,
+  const scheduledJobsQuery = useQuery({
+    queryKey: backupKeys.scheduledJobs(),
+    queryFn: backupService.getScheduledJobs,
   });
 
-  const schedulesQuery = useQuery({
-    queryKey: backupKeys.schedules(),
-    queryFn: backupService.getSchedules,
+  const scheduledRunsQuery = useQuery({
+    queryKey: backupKeys.scheduledRuns(),
+    queryFn: backupService.getScheduledRuns,
   });
 
   const settingsQuery = useQuery({
@@ -75,32 +75,78 @@ export const useBackups = () => {
       backupService.restoreBackup(kind, filename),
   });
 
-  const saveScheduleMutation = useMutation({
-    mutationFn: ({ kind, schedule }: { kind: BackupKind; schedule: DatabaseBackupSchedule }) =>
-      backupService.saveSchedule(kind, schedule),
+  const createScheduledJobMutation = useMutation({
+    mutationFn: (payload: Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>) =>
+      backupService.createScheduledJob(payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: backupKeys.schedules() });
+      queryClient.invalidateQueries({ queryKey: backupKeys.scheduledJobs() });
+    },
+  });
+
+  const updateScheduledJobMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Omit<ScheduledBackupJob, 'id' | 'displayName' | 'createdAt' | 'updatedAt' | 'taskType'>> }) =>
+      backupService.updateScheduledJob(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.scheduledJobs() });
+    },
+  });
+
+  const deleteScheduledJobMutation = useMutation({
+    mutationFn: (id: string) => backupService.deleteScheduledJob(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.scheduledJobs() });
+    },
+  });
+
+  const runScheduledJobNowMutation = useMutation({
+    mutationFn: (id: string) => backupService.runScheduledJobNow(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.scheduledRuns() });
+    },
+  });
+
+  const retryScheduledRunMutation = useMutation({
+    mutationFn: (runId: string) => backupService.retryScheduledRun(runId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.scheduledRuns() });
+    },
+  });
+
+  const saveBackupSettingsMutation = useMutation({
+    mutationFn: (payload: BackupSettings) => backupService.saveBackupSettings(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: backupKeys.settings() });
     },
   });
 
   return {
     backups: backupsQuery.data ?? [],
-    jobs: jobsQuery.data ?? [],
-    schedules: schedulesQuery.data,
+    scheduledJobs: scheduledJobsQuery.data ?? [],
+    scheduledRuns: scheduledRunsQuery.data ?? [],
     settings: settingsQuery.data,
-    isLoading: backupsQuery.isLoading || jobsQuery.isLoading,
+    isLoading: backupsQuery.isLoading || scheduledJobsQuery.isLoading || scheduledRunsQuery.isLoading || settingsQuery.isLoading,
     isActionLoading:
       createBackupMutation.isPending ||
       uploadBackupMutation.isPending ||
       updateBackupMutation.isPending ||
       deleteBackupMutation.isPending ||
       restoreBackupMutation.isPending ||
-      saveScheduleMutation.isPending,
+      createScheduledJobMutation.isPending ||
+      updateScheduledJobMutation.isPending ||
+      deleteScheduledJobMutation.isPending ||
+      runScheduledJobNowMutation.isPending ||
+      retryScheduledRunMutation.isPending ||
+      saveBackupSettingsMutation.isPending,
     createBackup: createBackupMutation.mutateAsync,
     uploadBackup: uploadBackupMutation.mutateAsync,
     updateBackup: updateBackupMutation.mutateAsync,
     deleteBackup: deleteBackupMutation.mutateAsync,
     restoreBackup: restoreBackupMutation.mutateAsync,
-    saveSchedule: saveScheduleMutation.mutateAsync,
+    createScheduledJob: createScheduledJobMutation.mutateAsync,
+    updateScheduledJob: updateScheduledJobMutation.mutateAsync,
+    deleteScheduledJob: deleteScheduledJobMutation.mutateAsync,
+    runScheduledJobNow: runScheduledJobNowMutation.mutateAsync,
+    retryScheduledRun: retryScheduledRunMutation.mutateAsync,
+    saveBackupSettings: saveBackupSettingsMutation.mutateAsync,
   };
 };

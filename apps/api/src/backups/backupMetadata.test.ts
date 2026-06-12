@@ -31,10 +31,23 @@ describe('backup metadata', () => {
       note: 'Before maintenance',
       createdByUpload: true,
       uploadedAt: '2026-06-10T03:00:00.000Z',
-      updatedAt: '2026-06-10T03:00:00.000Z'
+      updatedAt: '2026-06-10T03:00:00.000Z',
+      generatedBy: {
+        runId: 'run_123',
+        jobId: 'job_456',
+        trigger: 'schedule',
+        batchId: 'batch_789'
+      }
     });
 
-    expect(readMetadataIndex(file).files['mysql/mysql-20260610-030000.sql.gz']?.note).toBe('Before maintenance');
+    const index = readMetadataIndex(file);
+    expect(index.files['mysql/mysql-20260610-030000.sql.gz']?.note).toBe('Before maintenance');
+    expect(index.files['mysql/mysql-20260610-030000.sql.gz']?.generatedBy).toEqual({
+      runId: 'run_123',
+      jobId: 'job_456',
+      trigger: 'schedule',
+      batchId: 'batch_789'
+    });
 
     upsertBackupMetadata(file, {
       kind: 'mysql',

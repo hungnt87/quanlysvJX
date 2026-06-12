@@ -3,11 +3,12 @@ import multipart from '@fastify/multipart';
 import sensible from '@fastify/sensible';
 import { fail } from './api/envelope.js';
 import { AppError } from './api/errors.js';
-import { startBackupScheduler } from './backups/backupScheduler.js';
+import { startScheduledBackupScheduler } from './scheduledBackups/scheduledBackupScheduler.js';
 import { loadConfig, type ManagerConfig } from './config.js';
 import { createGameAccountService, type GameAccountService } from './gameAccounts/gameAccountService.js';
 import { createMssqlGameAccountRepository } from './gameAccounts/mssqlGameAccountRepository.js';
 import { registerBackupRoutes } from './routes/backupRoutes.js';
+import { registerScheduledBackupRoutes } from './routes/scheduledBackupRoutes.js';
 import { registerGameAccountRoutes } from './routes/gameAccountRoutes.js';
 import { registerHealthRoutes } from './routes/healthRoutes.js';
 import { registerLogRoutes } from './routes/logRoutes.js';
@@ -69,14 +70,15 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
   await registerServiceRoutes(app);
   await registerLogRoutes(app);
   await registerBackupRoutes(app);
+  await registerScheduledBackupRoutes(app);
   await registerGameAccountRoutes(app);
   await registerEnvRoutes(app);
   await registerSystemRoutes(app);
   await registerVersionRoutes(app);
 
   if (config.schedulerEnabled) {
-    app.log.info({ scheduleFile: config.backupScheduleFile }, 'Backup scheduler enabled');
-    const scheduledTask = startBackupScheduler(deps, app.log);
+    app.log.info('Backup scheduler enabled');
+    const scheduledTask = startScheduledBackupScheduler(deps, app.log);
     app.addHook('onClose', () => {
       scheduledTask.stop();
     });
