@@ -1,5 +1,5 @@
-import { notifications } from '@mantine/notifications';
 import axios, { type AxiosRequestConfig } from 'axios';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notification';
 import type { ApiResponse } from '../types';
 
 type BackendMessagePayload = {
@@ -25,19 +25,11 @@ function shouldShowSuccessToast(config?: AxiosRequestConfig) {
 }
 
 function showBackendErrorToast(message: string) {
-  notifications.show({
-    color: 'red',
-    title: 'Lỗi',
-    message,
-  });
+  showErrorNotification(message, 'Lỗi');
 }
 
 function showBackendSuccessToast(message: string) {
-  notifications.show({
-    color: 'green',
-    title: 'Thành công',
-    message,
-  });
+  showSuccessNotification(message, 'Thành công');
 }
 
 BaseService.interceptors.response.use(

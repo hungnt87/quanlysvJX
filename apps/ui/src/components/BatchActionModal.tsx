@@ -1,9 +1,9 @@
 import { Button, Group, Modal, Text, Box, ScrollArea, Stack } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { useEffect, useRef, useState } from 'react';
 import { ModalTitle } from '@/components/common/ModalTitle';
 import { serviceService } from '@/services/serviceService';
 import type { ServiceStatus } from '@/services/types';
+import { showSuccessNotification } from '@/utils/notification';
 
 type Props = {
   opened: boolean;
@@ -229,11 +229,7 @@ export function BatchActionModal({ opened, action, services, onClose, onSuccess 
       appendTerminalLine(
         `\n[Hệ thống] Tất cả dịch vụ đã được khởi chạy thành công! Bạn có thể đóng cửa sổ này.\n`
       );
-      notifications.show({
-        title: 'Thành công',
-        message: 'Tất cả dịch vụ đã được khởi chạy!',
-        color: 'green',
-      });
+      showSuccessNotification('Tất cả dịch vụ đã được khởi chạy!', 'Thành công');
     }
   };
 
@@ -297,11 +293,7 @@ export function BatchActionModal({ opened, action, services, onClose, onSuccess 
       appendTerminalLine(
         `\n[Hệ thống] Đã tắt sạch các dịch vụ game thành công! Bạn có thể đóng cửa sổ này.\n`
       );
-      notifications.show({
-        title: 'Thành công',
-        message: 'Đã tắt sạch các dịch vụ game (chừa lại Database)!',
-        color: 'green',
-      });
+      showSuccessNotification('Đã tắt sạch các dịch vụ game (chừa lại Database)!', 'Thành công');
     }
   };
 

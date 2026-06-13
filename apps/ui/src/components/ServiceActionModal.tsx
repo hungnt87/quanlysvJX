@@ -1,9 +1,9 @@
 import { Button, Group, Modal, Text, Box, ScrollArea, Loader } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { useEffect, useRef, useState } from 'react';
 import { ModalTitle } from '@/components/common/ModalTitle';
 import { serviceService } from '@/services/serviceService';
 import type { ServiceStatus } from '@/services/types';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notification';
 
 type Props = {
   opened: boolean;
@@ -113,11 +113,10 @@ export function ServiceActionModal({
 
       // Đóng modal và hiển thị Toast thông báo
       setTimeout(() => {
-        notifications.show({
-          title: 'Thành công',
-          message: `${action === 'stop' ? 'Dừng' : 'Khởi động lại'} dịch vụ ${service} thành công!`,
-          color: 'green',
-        });
+        showSuccessNotification(
+          `${action === 'stop' ? 'Dừng' : 'Khởi động lại'} dịch vụ ${service} thành công!`,
+          'Thành công'
+        );
         if (onCompleteRef.current) {
           onCompleteRef.current();
         }
@@ -206,22 +205,17 @@ export function ServiceActionModal({
             ? `[${data.code}] ${data.message}${data.exitCode !== undefined ? ` (exitCode: ${data.exitCode})` : ''}\n${data.detail}`
             : event.data;
           appendTerminalLine(message);
-          notifications.show({
-            title: data ? `Lỗi ${data.code}` : 'Lỗi tiến trình',
-            message: data?.message ?? 'Tiến trình start thất bại.',
-            color: 'red',
-          });
+          showErrorNotification(
+            data?.message ?? 'Tiến trình start thất bại.',
+            data ? `Lỗi ${data.code}` : 'Lỗi tiến trình'
+          );
         };
 
         const handleReady = (event: MessageEvent<string>) => {
           const data = parseEventData<StartReadyEvent>(event);
           readyReceived = true;
           appendTerminalLine(data?.message ?? `Dịch vụ ${service} đã sẵn sàng.`);
-          notifications.show({
-            title: 'Thành công',
-            message: `Khởi động dịch vụ ${service} thành công!`,
-            color: 'green',
-          });
+          showSuccessNotification(`Khởi động dịch vụ ${service} thành công!`, 'Thành công');
           setTimeout(() => {
             if (onCompleteRef.current) {
               onCompleteRef.current();
@@ -274,11 +268,10 @@ export function ServiceActionModal({
               activeStreamTargetRef.current = null;
             }
 
-            notifications.show({
-              title: 'Lỗi kết nối',
-              message: `Mất kết nối theo dõi tiến trình của dịch vụ ${service}.`,
-              color: 'red',
-            });
+            showErrorNotification(
+              `Mất kết nối theo dõi tiến trình của dịch vụ ${service}.`,
+              'Lỗi kết nối'
+            );
 
             if (onCloseRef.current) {
               onCloseRef.current();
@@ -322,11 +315,7 @@ export function ServiceActionModal({
           }
           const errMsg = err instanceof Error ? err.message : 'Khởi động lại thất bại';
           setLogs((current) => `${current}\n[Hệ thống Lỗi] ${errMsg}\n`);
-          notifications.show({
-            title: 'Lỗi khởi động lại',
-            message: errMsg,
-            color: 'red',
-          });
+          showErrorNotification(errMsg, 'Lỗi khởi động lại');
           if (onCloseRef.current) {
             onCloseRef.current();
           }
@@ -365,6 +354,7 @@ export function ServiceActionModal({
 
   const cleanLogs = (str: string) => {
     const stripped = str.replace(
+      // eslint-disable-next-line no-control-regex
       /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g,
       ''
     );

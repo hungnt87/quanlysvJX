@@ -20,7 +20,7 @@ export function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <MantineProvider defaultColorScheme="auto">
-        <Notifications />
+        <Notifications position="top-right" />
         <RouterProvider router={router} />
       </MantineProvider>
     </QueryClientProvider>

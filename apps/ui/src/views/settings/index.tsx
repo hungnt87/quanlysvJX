@@ -1,7 +1,7 @@
 import { Paper, Tabs } from '@mantine/core';
-import { notifications } from '@mantine/notifications';
 import { useCallback } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { showSuccessNotification, showErrorNotification } from '@/utils/notification';
 import { BackupSettingsTab } from './components/BackupSettingsTab';
 import { EnvEditor } from './components/EnvEditor';
 import { VersionManager } from './components/VersionManager';
@@ -36,11 +36,11 @@ export default function SettingsView() {
   const activeTab = getActiveSettingsTab(location.pathname);
 
   const handleSuccess = useCallback((message: string) => {
-    notifications.show({ color: 'green', title: 'Done', message });
+    showSuccessNotification(message, 'Hoàn thành');
   }, []);
 
   const handleError = useCallback((message: string) => {
-    notifications.show({ color: 'red', title: 'Operation failed', message });
+    showErrorNotification(message, 'Thao tác thất bại');
   }, []);
 
   if (!activeTab) {

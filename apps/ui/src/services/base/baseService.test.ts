@@ -46,11 +46,13 @@ describe('BaseService response envelope notifications', () => {
       })
     ).rejects.toThrow('Chưa có phiên bản game nào được kích hoạt.');
 
-    expect(mocks.showNotification).toHaveBeenCalledWith({
-      color: 'red',
-      title: 'Lỗi',
-      message: 'Chưa có phiên bản game nào được kích hoạt.',
-    });
+    expect(mocks.showNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'red',
+        title: 'Lỗi',
+        message: 'Chưa có phiên bản game nào được kích hoạt.',
+      })
+    );
   });
 
   it('shows a green toast with backend message for non-GET success responses', async () => {
@@ -69,11 +71,13 @@ describe('BaseService response envelope notifications', () => {
     });
 
     expect(response.data).toEqual({ message: 'Đã lưu cấu hình.' });
-    expect(mocks.showNotification).toHaveBeenCalledWith({
-      color: 'green',
-      title: 'Thành công',
-      message: 'Đã lưu cấu hình.',
-    });
+    expect(mocks.showNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        color: 'teal',
+        title: 'Thành công',
+        message: 'Đã lưu cấu hình.',
+      })
+    );
   });
 
   it('does not show success toast for GET responses', async () => {
