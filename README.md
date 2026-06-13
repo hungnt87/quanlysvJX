@@ -33,14 +33,16 @@ cd quanlysvJX
 
 ## 3. Kiem tra file cau hinh `.env`
 
-Repo da co file `.env` o thu muc goc. Ban co the mo file nay bang text editor neu muon xem nhanh.
+Repo da co file `.env` o thu muc goc. Ban co the tu sua bang text editor (nhu `nano .env`) hoac sua de nhat qua giao dien Web sau khi khoi dong Web Manager (Buoc 4).
 
-Nhung cach de sua de nhat la sau khi Web chay:
+**Luu y quan trong:** Vi server thuong chay tren may ao (VM), `localhost` se khong phai la IP dung de truy cap tu may thuc (may host). Ban can phai chay Web Manager len truoc, sau do truy cap bang IP cua may ao.
 
-1. Vao `http://localhost`.
-2. Mo `Cai dat`.
-3. Chon tab `Bien moi truong (.env)`.
-4. Sua cau hinh can thiet va bam luu.
+Cach sua tren giao dien Web:
+
+1. Chay Web Manager o Buoc 4.
+2. Vao trinh duyet bang IP cua may ao (vi du: `http://<IP-may-ao>`) hoac `http://localhost` neu dang o trong cung may ao co giao dien do hoa.
+3. Mo `Cai dat` -> Chon tab `Bien moi truong (.env)`.
+4. Sua cau hinh va bam luu.
 
 Cac muc thuong can quan tam:
 
@@ -61,7 +63,6 @@ docker compose up -d --build
 
 Lenh nay se build va chay:
 
-- API quan ly o cong `3001`
 - Giao dien Web o cong `80`
 
 Mo trinh duyet:
