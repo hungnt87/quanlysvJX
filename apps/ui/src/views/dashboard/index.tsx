@@ -70,7 +70,7 @@ export default function Dashboard() {
     const seenImages = new Set<string>();
 
     services.forEach((s) => {
-      if (!s.imageExists && !seenImages.has(s.imageName)) {
+      if ((!s.imageExists || s.needsRebuild) && !seenImages.has(s.imageName)) {
         seenImages.add(s.imageName);
         uniqueMissingServices.push(s.name);
       }
@@ -95,8 +95,8 @@ export default function Dashboard() {
     void queryClient.invalidateQueries({ queryKey: serviceKeys.all });
   }, [queryClient]);
 
-  const missingImagesCount = services.reduce((acc, s) => {
-    if (!s.imageExists) {
+  const imagePreparationCount = services.reduce((acc, s) => {
+    if (!s.imageExists || s.needsRebuild) {
       acc.add(s.imageName);
     }
     return acc;
@@ -133,7 +133,7 @@ export default function Dashboard() {
         </Paper>
       )}
 
-      {missingImagesCount > 0 && (
+      {imagePreparationCount > 0 && (
         <Paper
           withBorder
           p="md"
@@ -143,16 +143,16 @@ export default function Dashboard() {
           <Group justify="space-between" align="center">
             <Stack gap={2}>
               <Text fw={700} c="red" size="md">
-                Cảnh báo: Thiếu Docker Images
+                Cảnh báo: Docker Images cần chuẩn bị
               </Text>
               <Text size="sm" c="dimmed">
-                Hệ thống phát hiện có {missingImagesCount} Docker Images chưa được tải về hoặc build
-                cục bộ. Bạn cần chuẩn bị đầy đủ các images này để kích hoạt nút Start và khởi chạy
-                dịch vụ.
+                Hệ thống phát hiện có {imagePreparationCount} Docker Images bị thiếu hoặc cần build
+                lại sau khi Dockerfile/entrypoint thay đổi. Bạn cần chuẩn bị đầy đủ các images này
+                để kích hoạt nút Start và khởi chạy dịch vụ.
               </Text>
             </Stack>
             <Button color="red" size="md" onClick={handlePrepareAllImages}>
-              {`Tải hàng loạt docker image (${missingImagesCount})`}
+              {`Chuẩn bị Docker image (${imagePreparationCount})`}
             </Button>
           </Group>
         </Paper>
@@ -166,7 +166,7 @@ export default function Dashboard() {
             onSelect={handleSelectService}
             onAction={handleRunAction}
             onBatchAction={handleOpenBatch}
-            missingImagesCount={missingImagesCount}
+            missingImagesCount={imagePreparationCount}
           />
         </Grid.Col>
         <Grid.Col span={{ base: 12, md: 9 }}>

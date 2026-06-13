@@ -6,7 +6,8 @@ FROM ubuntu:22.04 AS builder
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Ho_Chi_Minh
 ENV WINEARCH=win32
-ENV WINEPREFIX=/home/appuser/.win32
+ENV HOME=/root
+ENV WINEPREFIX=/root/.win32
 ENV DISPLAY=:99
 
 RUN dpkg --add-architecture i386 \
@@ -29,24 +30,18 @@ RUN dpkg --add-architecture i386 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Tạo user appuser (UID/GID 1000)
-RUN groupadd -g 1000 appgroup \
-    && useradd -u 1000 -g appgroup -m -s /bin/bash appuser
-
-WORKDIR /home/appuser
+WORKDIR /root
 
 COPY dockerfiles/paysys-setup-mdac.sh /usr/local/bin/paysys-setup-mdac.sh
 COPY mount/paysyswin/MDAC_TYP.EXE /tmp/MDAC_TYP.EXE
 
-RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh \
-    && chown appuser:appgroup /tmp/MDAC_TYP.EXE
+RUN chmod +x /usr/local/bin/paysys-setup-mdac.sh
 
-# Chạy setup MDAC dưới appuser để prefix runtime có đúng owner và HOME.
+# Chạy setup MDAC dưới root để prefix runtime khớp với user chạy container.
 # Prefix này dùng chung cho Sword3PaySys.exe và S3RelayServer.exe.
-RUN su appuser -c 'WINEPREFIX=/home/appuser/.win32 PAYSYS_MDAC_OVERLAY=1 xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE' \
+RUN PAYSYS_MDAC_OVERLAY=1 xvfb-run -a /usr/local/bin/paysys-setup-mdac.sh /tmp/MDAC_TYP.EXE \
     && rm -f /tmp/MDAC_TYP.EXE \
-    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak \
-    && chown -R appuser:appgroup /home/appuser
+    && rm -rf /tmp/mdac-extract /tmp/sqloldb /tmp/sqlnet /tmp/sqlodbc /tmp/wdsetup /tmp/mdacxpak
 
 # ==========================================
 # STAGE 2: Runtime (Image tối giản cuối cùng)
@@ -56,7 +51,8 @@ FROM ubuntu:22.04 AS runtime
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Asia/Ho_Chi_Minh
 ENV WINEARCH=win32
-ENV WINEPREFIX=/home/appuser/.win32
+ENV HOME=/root
+ENV WINEPREFIX=/root/.win32
 ENV GNUTLS_SYSTEM_PRIORITY_FILE=/src/paysys/priorityGNU
 ENV DISPLAY=:99
 
@@ -81,22 +77,14 @@ RUN dpkg --add-architecture i386 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Tạo user appuser trong runtime stage
-RUN groupadd -g 1000 appgroup \
-    && useradd -u 1000 -g appgroup -m -s /bin/bash appuser
-
 WORKDIR /src/paysys/
 
 # Copy Wine prefix đã được chuẩn bị từ builder stage.
-COPY --from=builder --chown=appuser:appgroup /home/appuser/.win32 /home/appuser/.win32
+COPY --from=builder /root/.win32 /root/.win32
 
 COPY dockerfiles/paysys-entrypoint.sh /usr/local/bin/paysys-entrypoint.sh
 COPY dockerfiles/s3relay-entrypoint.sh /usr/local/bin/s3relay-entrypoint.sh
 RUN chmod +x /usr/local/bin/paysys-entrypoint.sh /usr/local/bin/s3relay-entrypoint.sh \
-    && mkdir -p /src/paysys/payserver_log /src/paysys/relayserver_log \
-    && chown -R appuser:appgroup /src/paysys
-
-# Chạy container dưới quyền user appuser
-USER appuser
+    && mkdir -p /src/paysys/payserver_log /src/paysys/relayserver_log
 
 CMD [ "paysys-entrypoint.sh" ]

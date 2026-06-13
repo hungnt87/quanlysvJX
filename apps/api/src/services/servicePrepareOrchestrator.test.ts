@@ -91,6 +91,27 @@ describe('prepareServicesWithProgress', () => {
     expect(events).toContainEqual({ type: 'close', exitCode: 0 });
   });
 
+  it('runs build when a build-backed image needs rebuild', async () => {
+    const composeCalls: string[][] = [];
+    const markedServices: string[] = [];
+
+    await prepareServicesWithProgress({
+      services: ['paysys'],
+      runDocker: async () => ok('[]'),
+      streamCompose: (args) => {
+        composeCalls.push([...args]);
+        return streamResult('rebuilding paysys...\n');
+      },
+      emit: vi.fn(),
+      composeConfig,
+      shouldPrepare: (serviceName) => serviceName === 'paysys',
+      markPrepared: (serviceName) => markedServices.push(serviceName)
+    });
+
+    expect(composeCalls).toEqual([['build', 'paysys']]);
+    expect(markedServices).toEqual(['paysys']);
+  });
+
   it('runs pull for missing image with hasBuild: false', async () => {
     const dockerCalls: string[][] = [];
     const composeCalls: string[][] = [];

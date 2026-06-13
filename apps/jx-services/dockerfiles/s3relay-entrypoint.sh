@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-WINE_PREFIX="${S3RELAY_WINEPREFIX:-/home/appuser/.win32}"
+WINE_PREFIX="${S3RELAY_WINEPREFIX:-/root/.win32}"
 export WINEPREFIX="${WINE_PREFIX}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 

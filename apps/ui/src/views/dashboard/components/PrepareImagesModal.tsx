@@ -174,7 +174,7 @@ export function PrepareImagesModal({
     <Modal
       opened={opened}
       onClose={handleClose}
-      title={<ModalTitle title="Chuẩn bị Docker Images" subtitle="Tải các image còn thiếu" />}
+      title={<ModalTitle title="Chuẩn bị Docker Images" subtitle="Tải hoặc build lại image" />}
       size="xl"
       closeOnClickOutside={isFinished}
       closeOnEscape={isFinished}
@@ -182,8 +182,8 @@ export function PrepareImagesModal({
     >
       <Stack gap="md">
         <Text size="sm" c="dimmed">
-          Hệ thống đang tiến hành chuẩn bị các Docker Images bị thiếu cục bộ. Việc này sẽ chạy tuần
-          tự để đảm bảo hiệu suất của máy chủ.
+          Hệ thống đang tiến hành chuẩn bị các Docker Images bị thiếu hoặc cần build lại. Việc này
+          sẽ chạy tuần tự để đảm bảo hiệu suất của máy chủ.
         </Text>
 
         <Paper withBorder p="xs" bg="var(--mantine-color-gray-light)">

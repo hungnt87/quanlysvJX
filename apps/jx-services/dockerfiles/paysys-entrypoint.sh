@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-WINE_PREFIX="${WINEPREFIX:-/home/appuser/.win32}"
+WINE_PREFIX="${WINEPREFIX:-/root/.win32}"
 READY_MARKER="${WINE_PREFIX}/.paysys-mdac-ready"
 
 mkdir -p /src/paysys/payserver_log

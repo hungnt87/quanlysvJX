@@ -113,7 +113,7 @@ describe('service routes', () => {
     const response = await app.inject({ method: 'POST', url: '/api/services/jxmysql/start' });
 
     expect(response.statusCode).toBe(200);
-    expect(calls).toEqual([['up', '-d', 'jxmysql']]);
+    expect(calls).toEqual([['up', '-d', '--no-build', 'jxmysql']]);
   });
 
   it('returns docker error details when a service action fails', async () => {
@@ -133,13 +133,8 @@ describe('service routes', () => {
 
   it('streams structured start events and lets compose handle dependencies', async () => {
     const composeCalls: string[][] = [];
-    const dockerCalls: string[][] = [];
     const app = await buildApp({
       config: testConfig(root),
-      runDocker: async (args) => {
-        dockerCalls.push([...args]);
-        return { stdout: '[]', stderr: '', exitCode: 0 };
-      },
       runCompose: async (args) => {
         composeCalls.push([...args]);
         if (args[0] === 'config') {
@@ -181,16 +176,14 @@ describe('service routes', () => {
     expect(response.payload).toContain('event: phase');
     expect(response.payload).toContain('event: ready');
     expect(response.payload).toContain('event: close');
-    expect(dockerCalls).toEqual([['image', 'inspect', 'paysys']]);
     expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'paysys']);
     expect(composeCalls).not.toContainEqual(['up', '-d', 'paysys']);
-    expect(composeCalls).not.toContainEqual(['up', '-d', '--build', '--no-deps', 'paysys']);
+    expect(composeCalls).not.toContainEqual(['up', '-d', '--build', 'paysys']);
   });
 
   it('streams structured errors when start fails', async () => {
     const app = await buildApp({
       config: testConfig(root),
-      runDocker: async () => ({ stdout: '[]', stderr: '', exitCode: 0 }),
       runCompose: async (args) => {
         if (args[0] === 'config') {
           return {

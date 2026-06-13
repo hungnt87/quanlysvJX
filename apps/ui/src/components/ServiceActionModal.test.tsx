@@ -39,6 +39,8 @@ const service = {
   imageExists: true,
   hasBuild: false,
   imageName: 'paysys',
+  needsRebuild: false,
+  buildReason: null,
 };
 
 describe('ServiceActionModal structured start events', () => {

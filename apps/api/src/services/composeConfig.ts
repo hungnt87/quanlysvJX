@@ -10,7 +10,7 @@ export type ComposeConfigDocument = {
   services?: Record<string, ComposeServiceDefinition>;
 };
 
-type ComposeServiceDefinition = {
+export type ComposeServiceDefinition = {
   image?: unknown;
   build?: unknown;
   healthcheck?: {

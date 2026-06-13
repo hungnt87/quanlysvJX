@@ -15,11 +15,24 @@ export type ComposeStream = EventEmitter & {
 };
 
 export function buildComposeArgs(args: readonly string[]) {
-  return ['compose', '--env-file', '.env', '-f', 'apps/jx-services/docker-compose.yaml', ...args];
+  const progressArgs = shouldUsePlainProgress(args) ? ['--ansi', 'never', '--progress', 'plain'] : [];
+  return [
+    'compose',
+    ...progressArgs,
+    '--env-file',
+    '.env',
+    '-f',
+    'apps/jx-services/docker-compose.yaml',
+    ...args
+  ];
 }
 
 export function buildDockerArgs(args: readonly string[]) {
   return [...args];
+}
+
+function shouldUsePlainProgress(args: readonly string[]) {
+  return args[0] === 'build' || (args[0] === 'up' && args.includes('--build'));
 }
 
 export async function runDockerCompose(

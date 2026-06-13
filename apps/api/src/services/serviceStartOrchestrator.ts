@@ -7,7 +7,6 @@ import type { StartErrorCode, StartPhase, StartServiceEvent } from './serviceSta
 type StartOptions = {
   serviceName: ServiceName | string;
   runCompose: (args: readonly string[]) => Promise<CommandResult>;
-  runDocker: (args: readonly string[]) => Promise<CommandResult>;
   streamCompose: (args: readonly string[]) => ComposeStream;
   emit: (event: StartServiceEvent) => void;
   signal?: AbortSignal;
@@ -57,41 +56,6 @@ async function runStartPipeline(options: StartOptions) {
 
   const serviceConfig = parseServiceConfig(configResult.stdout, options.serviceName, emit);
   if (!serviceConfig) return;
-
-  emit({ type: 'phase', phase: 'inspect', message: `Đang kiểm tra image ${serviceConfig.imageName}...` });
-  const inspectResult = await options.runDocker(['image', 'inspect', serviceConfig.imageName]);
-  const imageMissing =
-    inspectResult.exitCode !== 0 &&
-    isMissingImageOutput(`${inspectResult.stderr}\n${inspectResult.stdout}`);
-
-  if (inspectResult.exitCode !== 0 && !imageMissing) {
-    emitError(
-      emit,
-      'IMAGE_INSPECT_FAILED',
-      'inspect',
-      `Không kiểm tra được image ${serviceConfig.imageName}.`,
-      formatDetail(inspectResult),
-      inspectResult.exitCode
-    );
-    emit({ type: 'close', exitCode: inspectResult.exitCode });
-    return;
-  }
-
-  if (imageMissing) {
-    const phase: StartPhase = serviceConfig.hasBuild ? 'build' : 'pull';
-    const args = serviceConfig.hasBuild ? ['build', options.serviceName] : ['pull', options.serviceName];
-    const errorCode: StartErrorCode = serviceConfig.hasBuild ? 'BUILD_FAILED' : 'PULL_FAILED';
-    const label = serviceConfig.hasBuild ? 'Build' : 'Pull';
-    const prepared = await runStreamPhaseCommand({
-      phase,
-      errorCode,
-      message: `${label} image ${serviceConfig.imageName} thất bại.`,
-      command: () => options.streamCompose(args),
-      emit,
-      signal: options.signal
-    });
-    if (!prepared) return;
-  }
 
   const upResult = await runStreamPhaseCommand({
     phase: 'start',
@@ -285,10 +249,6 @@ async function waitForReadiness(input: {
 
 function isReady(state: string, health: string, hasHealthcheck: boolean) {
   return hasHealthcheck ? state === 'running' && health === 'healthy' : state === 'running';
-}
-
-function isMissingImageOutput(output: string) {
-  return /no such image|not found|reference does not exist/i.test(output);
 }
 
 function emitCommandLogs(emit: (event: StartServiceEvent) => void, result: CommandResult) {

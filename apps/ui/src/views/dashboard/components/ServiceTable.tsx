@@ -62,7 +62,7 @@ const ServiceRow = React.memo(
 
     const isDatabaseHealthy = isServiceHealthy('jxmysql') && isServiceHealthy('jxmssql');
 
-    let startDisabled = running || !service.imageExists;
+    let startDisabled = running || !service.imageExists || service.needsRebuild;
     let startTooltip = 'Khởi chạy dịch vụ';
     let stopDisabled = !running;
     let stopTooltip = 'Dừng dịch vụ';
@@ -74,6 +74,9 @@ const ServiceRow = React.memo(
       startTooltip = service.hasBuild
         ? 'Dịch vụ chưa có Docker Image. Vui lòng build image trước.'
         : 'Dịch vụ chưa có Docker Image. Vui lòng tải image về trước.';
+    } else if (service.needsRebuild) {
+      startTooltip =
+        service.buildReason ?? 'Docker Image cần build lại trước khi khởi chạy dịch vụ.';
     }
 
     // Ràng buộc thứ tự START
@@ -182,12 +185,14 @@ const ServiceRow = React.memo(
             </Badge>
             <Badge
               size="xs"
-              color={service.imageExists ? 'teal' : 'red'}
-              variant={service.imageExists ? 'light' : 'filled'}
+              color={!service.imageExists ? 'red' : service.needsRebuild ? 'yellow' : 'teal'}
+              variant={!service.imageExists ? 'filled' : 'light'}
             >
-              {service.imageExists
-                ? 'Image: Sẵn sàng'
-                : `Image: Thiếu (${service.hasBuild ? 'Build' : 'Tải'})`}
+              {!service.imageExists
+                ? `Image: Thiếu (${service.hasBuild ? 'Build' : 'Tải'})`
+                : service.needsRebuild
+                  ? 'Image: Cần rebuild'
+                  : 'Image: Sẵn sàng'}
             </Badge>
           </Group>
         </Table.Td>

@@ -23,10 +23,6 @@ function ok(stdout = ''): CommandResult {
   return { stdout, stderr: '', exitCode: 0 };
 }
 
-function fail(stderr: string, exitCode = 1): CommandResult {
-  return { stdout: '', stderr, exitCode };
-}
-
 function streamResult(stdoutText = '', stderrText = '', exitCode = 0): ComposeStream {
   const stdout = new PassThrough();
   const stderr = new PassThrough();
@@ -42,9 +38,8 @@ function streamResult(stdoutText = '', stderrText = '', exitCode = 0): ComposeSt
 }
 
 describe('startServiceWithProgress', () => {
-  it('skips build and pull when the image already exists', async () => {
+  it('starts the service without rebuilding', async () => {
     const composeCalls: string[][] = [];
-    const dockerCalls: string[][] = [];
     const events: StartServiceEvent[] = [];
 
     await startServiceWithProgress({
@@ -61,10 +56,6 @@ describe('startServiceWithProgress', () => {
         }
         return ok();
       },
-      runDocker: async (args) => {
-        dockerCalls.push([...args]);
-        return ok('[]');
-      },
       streamCompose: (args) => {
         composeCalls.push([...args]);
         return streamResult('started\n');
@@ -73,7 +64,6 @@ describe('startServiceWithProgress', () => {
       pollIntervalMs: 1
     });
 
-    expect(dockerCalls).toEqual([['image', 'inspect', 'paysys']]);
     expect(composeCalls).toEqual([
       ['config', '--format', 'json'],
       ['up', '-d', '--no-build', 'paysys'],
@@ -82,38 +72,7 @@ describe('startServiceWithProgress', () => {
     expect(events.some((event) => event.type === 'ready')).toBe(true);
   });
 
-  it('builds a missing build-backed image before up', async () => {
-    const composeCalls: string[][] = [];
-
-    await startServiceWithProgress({
-      serviceName: 'paysys',
-      runCompose: async (args) => {
-        composeCalls.push([...args]);
-        if (args[0] === 'config') return ok(composeConfig);
-        if (args[0] === 'ps') {
-          return ok(
-            JSON.stringify([
-              { Service: 'paysys', Name: 'paysys', State: 'running', Health: 'healthy' }
-            ])
-          );
-        }
-        return ok();
-      },
-      runDocker: async () => fail('No such image: paysys'),
-      streamCompose: (args) => {
-        composeCalls.push([...args]);
-        return streamResult();
-      },
-      emit: vi.fn(),
-      pollIntervalMs: 1
-    });
-
-    expect(composeCalls).toContainEqual(['build', 'paysys']);
-    expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'paysys']);
-    expect(composeCalls).not.toContainEqual(['up', '-d', 'paysys']);
-  });
-
-  it('pulls a missing external image before up', async () => {
+  it('uses the same no-build start command for external images', async () => {
     const composeCalls: string[][] = [];
 
     await startServiceWithProgress({
@@ -130,7 +89,6 @@ describe('startServiceWithProgress', () => {
         }
         return ok();
       },
-      runDocker: async () => fail('No such image: mysql:5.6'),
       streamCompose: (args) => {
         composeCalls.push([...args]);
         return streamResult();
@@ -139,27 +97,24 @@ describe('startServiceWithProgress', () => {
       pollIntervalMs: 1
     });
 
-    expect(composeCalls).toContainEqual(['pull', 'jxmysql']);
     expect(composeCalls).toContainEqual(['up', '-d', '--no-build', 'jxmysql']);
+    expect(composeCalls).not.toContainEqual(['pull', 'jxmysql']);
+    expect(composeCalls).not.toContainEqual(['up', '-d', '--build', 'jxmysql']);
   });
 
-  it('emits BUILD_FAILED when build exits non-zero', async () => {
+  it('emits UP_FAILED when compose up exits non-zero', async () => {
     const events: StartServiceEvent[] = [];
 
     await startServiceWithProgress({
       serviceName: 'paysys',
       runCompose: async (args) => (args[0] === 'config' ? ok(composeConfig) : ok()),
-      runDocker: async () => fail('No such image: paysys'),
-      streamCompose: (args) => {
-        if (args[0] === 'build') return streamResult('', 'build exploded', 17);
-        return streamResult();
-      },
+      streamCompose: () => streamResult('', 'start exploded', 17),
       emit: (event) => events.push(event),
       pollIntervalMs: 1
     });
 
     expect(events).toContainEqual(
-      expect.objectContaining({ type: 'error', code: 'BUILD_FAILED', exitCode: 17 })
+      expect.objectContaining({ type: 'error', code: 'UP_FAILED', exitCode: 17 })
     );
   });
 
@@ -179,7 +134,6 @@ describe('startServiceWithProgress', () => {
         }
         return ok();
       },
-      runDocker: async () => ok(),
       streamCompose: () => streamResult(),
       emit: (event) => events.push(event),
       pollIntervalMs: 1,
@@ -208,7 +162,6 @@ describe('startServiceWithProgress', () => {
                 { Service: 'paysys', Name: 'paysys', State: 'running', Health: 'healthy' }
               ])
             ),
-      runDocker: async () => ok(),
       streamCompose: () => {
         const stdout = new PassThrough();
         const stderr = new PassThrough();
@@ -228,7 +181,6 @@ describe('startServiceWithProgress', () => {
     await startServiceWithProgress({
       serviceName: 'paysys',
       runCompose: async () => ok(composeConfig),
-      runDocker: async () => ok(),
       streamCompose: () => streamResult(),
       emit: (event) => secondEvents.push(event),
       pollIntervalMs: 1

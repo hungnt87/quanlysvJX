@@ -34,6 +34,40 @@ describe('buildComposeArgs', () => {
       'json'
     ]);
   });
+
+  it('uses plain progress output for build-backed start streams', () => {
+    expect(buildComposeArgs(['up', '-d', '--build', 'paysys'])).toEqual([
+      'compose',
+      '--ansi',
+      'never',
+      '--progress',
+      'plain',
+      '--env-file',
+      '.env',
+      '-f',
+      'apps/jx-services/docker-compose.yaml',
+      'up',
+      '-d',
+      '--build',
+      'paysys'
+    ]);
+  });
+
+  it('uses plain progress output for explicit compose builds', () => {
+    expect(buildComposeArgs(['build', 'paysys'])).toEqual([
+      'compose',
+      '--ansi',
+      'never',
+      '--progress',
+      'plain',
+      '--env-file',
+      '.env',
+      '-f',
+      'apps/jx-services/docker-compose.yaml',
+      'build',
+      'paysys'
+    ]);
+  });
 });
 
 describe('buildDockerArgs', () => {

@@ -5,6 +5,7 @@ import { assertServiceName } from '../services/serviceAllowlist.js';
 import { ValidationError } from '../utils/errors.js';
 import { prepareServicesWithProgress, type PrepareServiceEvent } from '../services/servicePrepareOrchestrator.js';
 import { startServiceWithProgress } from '../services/serviceStartOrchestrator.js';
+import { getServiceBuildReadiness, markServiceImagePrepared } from '../services/serviceImageBuildState.js';
 import type { StartServiceEvent } from '../services/serviceStartEvents.js';
 import type { AppDeps } from '../app.js';
 
@@ -126,6 +127,17 @@ export class ServiceController {
         streamCompose: this.deps.streamCompose,
         emit: writeEvent,
         composeConfig,
+        shouldPrepare: (serviceName) => {
+          return getServiceBuildReadiness(
+            request.server.deps.config.projectRoot,
+            composeConfig,
+            serviceName,
+            true
+          ).needsRebuild;
+        },
+        markPrepared: (serviceName) => {
+          markServiceImagePrepared(request.server.deps.config.projectRoot, composeConfig, serviceName);
+        },
         signal: abortController.signal
       });
     })().catch((error: unknown) => {
@@ -190,7 +202,6 @@ export class ServiceController {
     void startServiceWithProgress({
       serviceName: name,
       runCompose: this.deps.runCompose,
-      runDocker: this.deps.runDocker,
       streamCompose: this.deps.streamCompose,
       emit: writeEvent,
       signal: abortController.signal

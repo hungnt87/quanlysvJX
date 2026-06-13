@@ -14,6 +14,8 @@ type PrepareOptions = {
   streamCompose: (args: readonly string[]) => ComposeStream;
   emit: (event: PrepareServiceEvent) => void;
   composeConfig: ComposeConfigDocument;
+  shouldPrepare?: (serviceName: string) => boolean;
+  markPrepared?: (serviceName: string) => void;
   signal?: AbortSignal;
 };
 
@@ -42,10 +44,11 @@ export async function prepareServicesWithProgress(options: PrepareOptions) {
     }
 
     const { imageName, hasBuild } = serviceConfig;
+    const shouldForcePrepare = options.shouldPrepare?.(serviceName) ?? false;
 
     // Check if image already exists
     const inspectResult = await runDocker(['image', 'inspect', imageName]);
-    if (inspectResult.exitCode === 0) {
+    if (inspectResult.exitCode === 0 && !shouldForcePrepare) {
       emit({
         type: 'success',
         service: serviceName,
@@ -134,6 +137,7 @@ export async function prepareServicesWithProgress(options: PrepareOptions) {
       service: serviceName,
       message: `Đã chuẩn bị xong image cho dịch vụ ${serviceName}.`
     });
+    options.markPrepared?.(serviceName);
   }
 
   emit({ type: 'close', exitCode: 0 });

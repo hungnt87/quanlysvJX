@@ -15,6 +15,8 @@ export type ServiceStatus = {
   imageExists: boolean;
   hasBuild: boolean;
   imageName: string;
+  needsRebuild: boolean;
+  buildReason: string | null;
 };
 
 export type GameVersion = {

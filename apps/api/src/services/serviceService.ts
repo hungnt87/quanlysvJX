@@ -2,6 +2,7 @@ import { readVersionRegistry } from '../versions/versionRegistry.js';
 import { ValidationError, CommandError } from '../utils/errors.js';
 import { assertServiceName } from '../services/serviceAllowlist.js';
 import { resolveComposeServiceConfig } from '../services/composeConfig.js';
+import { getServiceBuildReadiness } from '../services/serviceImageBuildState.js';
 import type { ServiceRepository } from '../repositories/serviceRepository.js';
 
 export class ServiceService {
@@ -46,11 +47,18 @@ export class ServiceService {
           imageExists = await this.serviceRepository.checkDockerImageExists(imageName);
         }
 
+        const buildReadiness =
+          cachedConfig && hasBuild
+            ? getServiceBuildReadiness(this.projectRoot, cachedConfig, service.name, imageExists)
+            : { needsRebuild: false, buildReason: null };
+
         return {
           ...service,
           imageName,
           hasBuild,
-          imageExists
+          imageExists,
+          needsRebuild: buildReadiness.needsRebuild,
+          buildReason: buildReadiness.buildReason
         };
       })
     );
@@ -72,7 +80,7 @@ export class ServiceService {
     let args: readonly string[];
     let successMessage: string;
     if (action === 'start') {
-      args = ['up', '-d', serviceName];
+      args = ['up', '-d', '--no-build', serviceName];
       successMessage = `Started ${serviceName}`;
     } else if (action === 'stop') {
       args = ['rm', '-f', '-s', serviceName];
