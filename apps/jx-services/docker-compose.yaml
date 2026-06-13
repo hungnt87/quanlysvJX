@@ -70,6 +70,7 @@ services:
       dockerfile: ./dockerfiles/Dockerfile.paysys
     image: paysys
     container_name: paysys
+    user: "0:0"
     restart: no
     tty: true
     ipc: host
@@ -99,6 +100,7 @@ services:
   s3relayserver:
     image: paysys
     container_name: s3relayserver
+    user: "0:0"
     restart: no
     tty: true
     ipc: host
