@@ -1,4 +1,4 @@
-import { ValidationError } from '../api/errors.js';
+import { ValidationError } from '../utils/errors.js';
 
 export const serviceNames = [
   'jxmysql',

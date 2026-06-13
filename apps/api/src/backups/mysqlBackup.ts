@@ -2,7 +2,7 @@ import { chmodSync, chownSync, mkdirSync, readFileSync } from 'node:fs';
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { CommandError } from '../api/errors.js';
+import { CommandError } from '../utils/errors.js';
 import type { AppDeps } from '../app.js';
 import { assertBackupFile, buildBackupFilename } from './backupPaths.js';
 import { upsertBackupMetadata } from './backupMetadata.js';

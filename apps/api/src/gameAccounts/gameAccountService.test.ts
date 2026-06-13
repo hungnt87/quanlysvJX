@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { ConflictError, NotFoundError } from '../api/errors.js';
+import { ConflictError, NotFoundError } from '../utils/errors.js';
 import { createGameAccountService, type GameAccountRepository } from './gameAccountService.js';
 
 function fakeRepository(overrides: Partial<GameAccountRepository> = {}): GameAccountRepository {

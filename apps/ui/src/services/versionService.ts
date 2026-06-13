@@ -94,12 +94,14 @@ function uploadWithProgress(
     xhr.onload = () => {
       try {
         const body = JSON.parse(xhr.responseText || '{}') as ApiResponse<GameVersion>;
-        if (xhr.status >= 200 && xhr.status < 300 && body.success) {
+        if (xhr.status >= 200 && xhr.status < 300 && body.status === 'success') {
           resolve(body.data);
           return;
         }
         reject(
-          new Error(body.success === false ? body.error : `Upload failed with status ${xhr.status}`)
+          new Error(
+            body.status === 'error' ? body.message : `Upload failed with status ${xhr.status}`
+          )
         );
       } catch (error) {
         reject(error instanceof Error ? error : new Error('Upload failed'));

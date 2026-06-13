@@ -6,7 +6,7 @@ import {
   tickScheduledBackupScheduler,
   performScheduledBackupStartupInit
 } from './scheduledBackupScheduler.js';
-import { readScheduledBackupJobs, createScheduledBackupJob } from './scheduledBackupJobs.js';
+import { createScheduledBackupJob } from './scheduledBackupJobs.js';
 import { readScheduledBackupRuns } from './scheduledBackupRuns.js';
 
 describe('scheduled backup scheduler', () => {

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { ValidationError } from '../api/errors.js';
+import { ValidationError } from '../utils/errors.js';
 
 export type BackupKind = 'mysql' | 'mssql';
 

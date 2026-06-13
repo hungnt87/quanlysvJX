@@ -4,12 +4,16 @@ export class AppError extends Error {
     message: string
   ) {
     super(message);
+    this.name = this.constructor.name;
   }
 }
 
 export class ValidationError extends AppError {
-  constructor(message: string) {
+  public readonly errors?: Array<{ field: string; message: string }>;
+
+  constructor(message: string, errors?: Array<{ field: string; message: string }>) {
     super(400, message);
+    this.errors = errors;
   }
 }
 

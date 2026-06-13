@@ -81,8 +81,7 @@ describe('service routes', () => {
       ['config', '--format', 'json']
     ]);
     const body = response.json();
-    expect(body.success).toBe(true);
-    expect(body.error).toBeNull();
+    expect(body.status).toBe('success');
     expect(body.data).toHaveLength(8);
     expect(body.data).toEqual(
       expect.arrayContaining([
@@ -126,9 +125,9 @@ describe('service routes', () => {
     const response = await app.inject({ method: 'POST', url: '/api/services/paysys/start' });
 
     expect(response.statusCode).toBe(500);
-    expect(response.json()).toMatchObject({
-      success: false,
-      error: 'Started paysys failed: dependency failed healthcheck\nextra detail'
+    expect(response.json()).toEqual({
+      status: 'error',
+      message: 'Started paysys failed: dependency failed healthcheck\nextra detail'
     });
   });
 

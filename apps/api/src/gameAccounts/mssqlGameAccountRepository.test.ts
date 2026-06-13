@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { ServiceUnavailableError } from '../api/errors.js';
+import { ServiceUnavailableError } from '../utils/errors.js';
 import { createMssqlGameAccountRepository } from './mssqlGameAccountRepository.js';
 
 const sqlMocks = vi.hoisted(() => ({

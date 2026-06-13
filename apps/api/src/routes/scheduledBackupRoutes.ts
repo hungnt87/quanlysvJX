@@ -1,20 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { ok } from '../api/envelope.js';
+import { validate } from '../middleware/validate.js';
 import { backupScheduleRuleSchema } from '../scheduledBackups/scheduledBackupTypes.js';
-import {
-  createScheduledBackupJob,
-  readScheduledBackupJobs,
-  updateScheduledBackupJob,
-  softDeleteScheduledBackupJob,
-  readBackupSettings,
-  writeBackupSettings
-} from '../scheduledBackups/scheduledBackupJobs.js';
-import {
-  enqueueScheduledBackupRun,
-  listScheduledBackupRuns,
-  readScheduledBackupRuns
-} from '../scheduledBackups/scheduledBackupRuns.js';
+import { BackupRepository } from '../repositories/backupRepository.js';
+import { BackupService } from '../services/backupService.js';
+import { BackupController } from '../controllers/backupController.js';
 
 const createJobSchema = z.object({
   database: z.enum(['mysql', 'mssql']),
@@ -32,146 +22,70 @@ const retentionSettingsSchema = z.object({
   mssqlRetentionDays: z.number().int().min(1)
 });
 
+const idParamSchema = z.object({
+  id: z.string()
+});
+
+const runIdParamSchema = z.object({
+  runId: z.string()
+});
+
 export async function registerScheduledBackupRoutes(app: FastifyInstance) {
-  // GET /api/scheduled-jobs
-  app.get('/api/scheduled-jobs', async () => {
-    const file = app.deps.config.scheduledBackupJobsFile!;
-    const data = readScheduledBackupJobs(file);
-    return ok(data.jobs.filter(job => job.deletedAt === null));
-  });
+  const backupRepository = new BackupRepository(app.deps.config);
+  const backupService = new BackupService(backupRepository, app.deps);
+  const backupController = new BackupController(backupService);
 
-  // POST /api/scheduled-jobs
-  app.post('/api/scheduled-jobs', async (request) => {
-    const file = app.deps.config.scheduledBackupJobsFile!;
-    const body = createJobSchema.parse(request.body);
-    const newJob = createScheduledBackupJob(file, body);
-    return ok(newJob);
-  });
+  app.get('/api/scheduled-jobs', (req, reply) => backupController.listScheduledJobs(req, reply));
 
-  // PUT /api/scheduled-jobs/:id
-  app.put('/api/scheduled-jobs/:id', async (request) => {
-    const file = app.deps.config.scheduledBackupJobsFile!;
-    const { id } = request.params as { id: string };
-    const body = updateJobSchema.parse(request.body);
-    const updatedJob = updateScheduledBackupJob(file, id, body);
-    return ok(updatedJob);
-  });
+  app.post(
+    '/api/scheduled-jobs',
+    {
+      preHandler: validate({ body: createJobSchema })
+    },
+    (req, reply) => backupController.createScheduledJob(req, reply)
+  );
 
-  // DELETE /api/scheduled-jobs/:id
-  app.delete('/api/scheduled-jobs/:id', async (request) => {
-    const file = app.deps.config.scheduledBackupJobsFile!;
-    const { id } = request.params as { id: string };
-    const deletedJob = softDeleteScheduledBackupJob(file, id);
-    return ok(deletedJob);
-  });
+  app.put(
+    '/api/scheduled-jobs/:id',
+    {
+      preHandler: validate({ params: idParamSchema, body: updateJobSchema })
+    },
+    (req, reply) => backupController.updateScheduledJob(req as any, reply)
+  );
 
-  // POST /api/scheduled-jobs/:id/run
-  app.post('/api/scheduled-jobs/:id/run', async (request) => {
-    const jobsFile = app.deps.config.scheduledBackupJobsFile!;
-    const runsFile = app.deps.config.scheduledBackupRunsFile!;
-    const { id } = request.params as { id: string };
+  app.delete(
+    '/api/scheduled-jobs/:id',
+    {
+      preHandler: validate({ params: idParamSchema })
+    },
+    (req, reply) => backupController.deleteScheduledJob(req as any, reply)
+  );
 
-    const jobsData = readScheduledBackupJobs(jobsFile);
-    const job = jobsData.jobs.find(j => j.id === id && j.deletedAt === null);
+  app.post(
+    '/api/scheduled-jobs/:id/run',
+    {
+      preHandler: validate({ params: idParamSchema })
+    },
+    (req, reply) => backupController.runScheduledJobNow(req as any, reply)
+  );
 
-    if (!job) {
-      throw app.httpErrors.notFound('Không tìm thấy job hoặc job đã bị xóa.');
-    }
+  app.get('/api/scheduled-job-runs', (req, reply) => backupController.getScheduledJobRuns(req as any, reply));
 
-    const run = enqueueScheduledBackupRun(
-      runsFile,
-      {
-        jobId: job.id,
-        jobDisplayName: job.displayName,
-        database: job.database,
-        trigger: 'manual',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: job.schedule
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
+  app.post(
+    '/api/scheduled-job-runs/:runId/retry',
+    {
+      preHandler: validate({ params: runIdParamSchema })
+    },
+    (req, reply) => backupController.retryScheduledRun(req as any, reply)
+  );
 
-    return ok(run);
-  });
+  app.get('/api/backup-settings', (req, reply) => backupController.getBackupSettings(req, reply));
 
-  // GET /api/scheduled-job-runs
-  app.get('/api/scheduled-job-runs', async (request) => {
-    const query = request.query as {
-      database?: string;
-      status?: string;
-      trigger?: string;
-      jobId?: string;
-    };
-    const runs = listScheduledBackupRuns(app.deps.config.scheduledBackupRunsFile!);
-    const filtered = runs.filter(run => {
-      if (query.database && run.database !== query.database) return false;
-      if (query.status && run.status !== query.status) return false;
-      if (query.trigger && run.trigger !== query.trigger) return false;
-      if (query.jobId && run.jobId !== query.jobId) return false;
-      return true;
-    });
-
-    // Sắp xếp giảm dần theo queuedAt (mới nhất lên đầu)
-    filtered.sort((a, b) => new Date(b.queuedAt).getTime() - new Date(a.queuedAt).getTime());
-    return ok(filtered);
-  });
-
-  // POST /api/scheduled-job-runs/:runId/retry
-  app.post('/api/scheduled-job-runs/:runId/retry', async (request) => {
-    const runsFile = app.deps.config.scheduledBackupRunsFile!;
-    const { runId } = request.params as { runId: string };
-
-    const runsData = readScheduledBackupRuns(runsFile);
-    const oldRun = runsData.runs.find(r => r.runId === runId);
-
-    if (!oldRun) {
-      throw app.httpErrors.notFound('Không tìm thấy lượt chạy.');
-    }
-
-    const run = enqueueScheduledBackupRun(
-      runsFile,
-      {
-        jobId: oldRun.jobId,
-        jobDisplayName: oldRun.jobDisplayName,
-        database: oldRun.database,
-        trigger: 'retry',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: oldRun.scheduleSnapshot
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
-
-    return ok(run);
-  });
-
-  // GET /api/backup-settings
-  app.get('/api/backup-settings', async () => {
-    const jobsFile = app.deps.config.scheduledBackupJobsFile!;
-    const defaultConfig = {
-      mysqlRetentionDays: app.deps.config.mysqlRetentionDays ?? 14,
-      mssqlRetentionDays: app.deps.config.mssqlRetentionDays ?? 14
-    };
-    const settings = readBackupSettings(jobsFile, defaultConfig);
-
-    return ok({
-      mysqlBackupDir: app.deps.config.mysqlBackupDir,
-      mssqlBackupDir: app.deps.config.mssqlBackupDir,
-      backupMetadataFile: app.deps.config.backupMetadataFile,
-      backupScheduleFile: app.deps.config.backupScheduleFile,
-      scheduledBackupJobsFile: app.deps.config.scheduledBackupJobsFile,
-      scheduledBackupRunsFile: app.deps.config.scheduledBackupRunsFile,
-      mysqlRetentionDays: settings.mysqlRetentionDays,
-      mssqlRetentionDays: settings.mssqlRetentionDays
-    });
-  });
-
-  // PUT /api/backup-settings
-  app.put('/api/backup-settings', async (request) => {
-    const jobsFile = app.deps.config.scheduledBackupJobsFile!;
-    const body = retentionSettingsSchema.parse(request.body);
-    writeBackupSettings(jobsFile, body);
-    return ok(body);
-  });
+  app.put(
+    '/api/backup-settings',
+    {
+      preHandler: validate({ body: retentionSettingsSchema })
+    },
+    (req, reply) => backupController.saveBackupSettings(req, reply)
+  );
 }

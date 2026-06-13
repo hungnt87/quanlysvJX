@@ -7,9 +7,7 @@ import {
   enqueueScheduledBackupRun,
   cancelQueuedRunsForJob,
   markStaleRunningRunsFailed,
-  startNextQueuedRunForDatabase,
-  finishScheduledBackupRun,
-  listScheduledBackupRuns
+  startNextQueuedRunForDatabase
 } from './scheduledBackupRuns.js';
 
 describe('scheduled backup runs store', () => {

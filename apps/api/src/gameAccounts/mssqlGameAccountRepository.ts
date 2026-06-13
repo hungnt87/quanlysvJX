@@ -1,5 +1,5 @@
 import sql from 'mssql';
-import { ServiceUnavailableError } from '../api/errors.js';
+import { ServiceUnavailableError } from '../utils/errors.js';
 import type { MssqlConfig } from '../config.js';
 import type { GameAccountView, ListGameAccountsQuery } from './accountSchemas.js';
 import type { CreateGameAccountRecord, GameAccountRepository, UpdateGameAccountRecord } from './gameAccountService.js';

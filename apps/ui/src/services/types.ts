@@ -1,6 +1,6 @@
 export type ApiResponse<T> =
-  | { success: true; data: T; error: null }
-  | { success: false; data: null; error: string };
+  | { status: 'success'; message?: string; data: T }
+  | { status: 'error'; message: string; errors?: Array<{ field: string; message: string }> };
 
 export type ApiEnvelope<T> = ApiResponse<T>;
 

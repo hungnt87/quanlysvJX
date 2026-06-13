@@ -1,6 +1,6 @@
 import { chmodSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
-import { CommandError } from '../api/errors.js';
+import { CommandError } from '../utils/errors.js';
 import type { AppDeps } from '../app.js';
 import { buildBackupFilename } from './backupPaths.js';
 import { upsertBackupMetadata } from './backupMetadata.js';

@@ -1,5 +1,8 @@
 import type { FastifyInstance } from 'fastify';
+import { HealthController } from '../controllers/healthController.js';
 
 export async function registerHealthRoutes(app: FastifyInstance) {
-  app.get('/api/health', async () => ({ success: true, data: { status: 'ok' }, error: null }));
+  const healthController = new HealthController();
+
+  app.get('/api/health', (req, reply) => healthController.getHealth(req, reply));
 }

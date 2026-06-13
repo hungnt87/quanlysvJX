@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { EventEmitter } from 'node:events';
-import { CommandError } from '../api/errors.js';
+import { CommandError } from '../utils/errors.js';
 
 export type CommandResult = {
   stdout: string;

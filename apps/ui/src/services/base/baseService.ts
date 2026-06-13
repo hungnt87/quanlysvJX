@@ -43,19 +43,19 @@ function showBackendSuccessToast(message: string) {
 BaseService.interceptors.response.use(
   (response) => {
     const apiResponse = response.data as ApiResponse<unknown>;
-    if (apiResponse && typeof apiResponse === 'object' && 'success' in apiResponse) {
-      if (apiResponse.success) {
-        if (
-          shouldShowSuccessToast(response.config) &&
-          isBackendMessagePayload(apiResponse.data) &&
-          typeof apiResponse.data.message === 'string' &&
-          apiResponse.data.message.trim().length > 0
-        ) {
-          showBackendSuccessToast(apiResponse.data.message);
+    if (apiResponse && typeof apiResponse === 'object' && 'status' in apiResponse) {
+      if (apiResponse.status === 'success') {
+        const successMsg =
+          apiResponse.message ||
+          (isBackendMessagePayload(apiResponse.data) && typeof apiResponse.data.message === 'string'
+            ? apiResponse.data.message
+            : null);
+        if (shouldShowSuccessToast(response.config) && successMsg && successMsg.trim().length > 0) {
+          showBackendSuccessToast(successMsg);
         }
         response.data = apiResponse.data;
-      } else {
-        const errorMsg = apiResponse.error || 'Yêu cầu thất bại';
+      } else if (apiResponse.status === 'error') {
+        const errorMsg = apiResponse.message || 'Yêu cầu thất bại';
         showBackendErrorToast(errorMsg);
         const err: ToastedError = new Error(errorMsg);
         err.response = response;

@@ -38,9 +38,8 @@ describe('BaseService response envelope notifications', () => {
         adapter: async () =>
           mockResponse(
             {
-              success: false,
-              data: null,
-              error: 'Chưa có phiên bản game nào được kích hoạt.',
+              status: 'error',
+              message: 'Chưa có phiên bản game nào được kích hoạt.',
             },
             'POST'
           ),
@@ -61,9 +60,9 @@ describe('BaseService response envelope notifications', () => {
       adapter: async () =>
         mockResponse(
           {
-            success: true,
+            status: 'success',
+            message: 'Đã lưu cấu hình.',
             data: { message: 'Đã lưu cấu hình.' },
-            error: null,
           },
           'POST'
         ),
@@ -83,9 +82,9 @@ describe('BaseService response envelope notifications', () => {
       method: 'GET',
       adapter: async () =>
         mockResponse({
-          success: true,
+          status: 'success',
+          message: 'Danh sách đã tải.',
           data: { message: 'Danh sách đã tải.' },
-          error: null,
         }),
     });
 

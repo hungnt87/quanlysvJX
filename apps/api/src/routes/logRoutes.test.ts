@@ -16,10 +16,9 @@ describe('log routes', () => {
     const response = await app.inject({ method: 'GET', url: '/api/services/jxmysql/logs?tail=20' });
 
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({
-      success: true,
-      data: { service: 'jxmysql', tail: 50, logs: 'ready\n' },
-      error: null
+    expect(response.json()).toEqual({
+      status: 'success',
+      data: { service: 'jxmysql', tail: 50, logs: 'ready\n' }
     });
     expect(calls).toEqual([['logs', '--no-color', '--timestamps', '--tail', '50', 'jxmysql']]);
   });

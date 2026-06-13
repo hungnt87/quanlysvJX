@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError } from '../api/errors.js';
+import { ConflictError, NotFoundError } from '../utils/errors.js';
 import type { CreateGameAccountRequest, GameAccountListResponse, GameAccountView, ListGameAccountsQuery, UpdateGameAccountRequest } from './accountSchemas.js';
 import { hashGamePassword } from './passwordHash.js';
 

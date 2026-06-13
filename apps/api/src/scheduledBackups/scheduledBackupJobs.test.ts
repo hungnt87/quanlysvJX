@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -6,8 +6,7 @@ import {
   createScheduledBackupJob,
   readScheduledBackupJobs,
   softDeleteScheduledBackupJob,
-  updateScheduledBackupJob,
-  writeScheduledBackupJobs
+  updateScheduledBackupJob
 } from './scheduledBackupJobs.js';
 
 describe('scheduled backup jobs store', () => {

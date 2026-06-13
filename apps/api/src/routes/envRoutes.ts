@@ -1,8 +1,10 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { ok } from '../api/envelope.js';
+import { validate } from '../middleware/validate.js';
+import { EnvRepository } from '../repositories/envRepository.js';
+import { EnvService } from '../services/envService.js';
+import { EnvController } from '../controllers/envController.js';
 
 const saveEnvSchema = z.object({
   content: z.string()
@@ -10,26 +12,17 @@ const saveEnvSchema = z.object({
 
 export async function registerEnvRoutes(app: FastifyInstance) {
   const envFilePath = path.join(app.deps.config.projectRoot, '.env');
+  const envRepository = new EnvRepository(envFilePath);
+  const envService = new EnvService(envRepository);
+  const envController = new EnvController(envService);
 
-  app.get('/api/env', async () => {
-    try {
-      if (!fs.existsSync(envFilePath)) {
-        return ok({ content: '' });
-      }
-      const content = fs.readFileSync(envFilePath, 'utf8');
-      return ok({ content });
-    } catch (error) {
-      throw app.httpErrors.internalServerError(error instanceof Error ? error.message : 'Cannot read .env file');
-    }
-  });
+  app.get('/api/env', (req, reply) => envController.getEnv(req, reply));
 
-  app.post('/api/env', async (request) => {
-    const { content } = saveEnvSchema.parse(request.body);
-    try {
-      fs.writeFileSync(envFilePath, content, 'utf8');
-      return ok({ message: 'Env configuration saved successfully' });
-    } catch (error) {
-      throw app.httpErrors.internalServerError(error instanceof Error ? error.message : 'Cannot write .env file');
-    }
-  });
+  app.post(
+    '/api/env',
+    {
+      preHandler: validate({ body: saveEnvSchema })
+    },
+    (req, reply) => envController.saveEnv(req as any, reply)
+  );
 }

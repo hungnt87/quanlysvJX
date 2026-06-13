@@ -1,8 +1,7 @@
 import Fastify from 'fastify';
 import multipart from '@fastify/multipart';
 import sensible from '@fastify/sensible';
-import { fail } from './api/envelope.js';
-import { AppError } from './api/errors.js';
+import { getErrorHandler } from './middleware/errorHandler.js';
 import { startScheduledBackupScheduler } from './scheduledBackups/scheduledBackupScheduler.js';
 import { loadConfig, type ManagerConfig } from './config.js';
 import { createGameAccountService, type GameAccountService } from './gameAccounts/gameAccountService.js';
@@ -51,20 +50,7 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
   });
   app.decorate('deps', deps);
 
-  app.setErrorHandler((error, _request, reply) => {
-    if (error instanceof AppError) {
-      void reply.status(error.statusCode).send(fail(error.message));
-      return;
-    }
-
-    if (isHttpClientError(error)) {
-      void reply.status(error.statusCode).send(fail(error.message));
-      return;
-    }
-
-    app.log.error({ err: error }, 'Unhandled manager API error');
-    void reply.status(500).send(fail('Unexpected server error'));
-  });
+  app.setErrorHandler(getErrorHandler(app));
 
   await registerHealthRoutes(app);
   await registerServiceRoutes(app);
@@ -89,18 +75,6 @@ export async function buildApp(overrides: Partial<AppDeps> = {}) {
   return app;
 }
 
-function isHttpClientError(error: unknown): error is { statusCode: number; message: string } {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'statusCode' in error &&
-    'message' in error &&
-    typeof error.statusCode === 'number' &&
-    error.statusCode >= 400 &&
-    error.statusCode < 500 &&
-    typeof error.message === 'string'
-  );
-}
 
 declare module 'fastify' {
   interface FastifyInstance {

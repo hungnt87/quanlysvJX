@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ValidationError } from '../api/errors.js';
+import { ValidationError } from '../utils/errors.js';
 import { deleteBackupFile, listBackupFiles, renameBackupFile, validateBackupExtension, writeUploadedBackupFile } from './backupFiles.js';
 
 function makeRoot() {

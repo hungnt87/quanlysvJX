@@ -79,7 +79,7 @@ describe('version routes', () => {
     });
 
     expect(response.statusCode).toBe(409);
-    expect(response.json().error).toContain('Tên phiên bản đã tồn tại');
+    expect(response.json().message).toContain('Tên phiên bản đã tồn tại');
   });
 
   it('deletes the active version when core game services are not running', async () => {
@@ -121,7 +121,7 @@ describe('version routes', () => {
     const response = await app.inject({ method: 'DELETE', url: '/api/versions/mel' });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json().error).toContain('jxserver');
+    expect(response.json().message).toContain('jxserver');
     expect(existsSync(path.join(getVersionsDir(root), 'mel'))).toBe(true);
     expect(readVersionRegistry(root).activeVersion).toBe('mel');
   });

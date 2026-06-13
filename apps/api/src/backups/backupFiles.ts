@@ -1,6 +1,6 @@
 import { chmodSync, chownSync, existsSync, mkdirSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { ValidationError } from '../api/errors.js';
+import { ValidationError } from '../utils/errors.js';
 import { getMetadataKey, readMetadataIndex, removeBackupMetadata, upsertBackupMetadata } from './backupMetadata.js';
 import { assertBackupFile, getBackupDirectory, type BackupKind } from './backupPaths.js';
 

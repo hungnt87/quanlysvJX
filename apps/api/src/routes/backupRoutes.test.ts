@@ -56,7 +56,7 @@ describe('backup routes', () => {
     expect(app.deps.config.backupScheduleFile.endsWith('backup-schedules.json')).toBe(true);
     expect(app.deps.config.schedulerEnabled).toBe(false);
     expect(response.statusCode).toBe(200);
-    expect(response.json()).toMatchObject({ success: true, data: [], error: null });
+    expect(response.json()).toEqual({ status: 'success', data: [] });
   });
 
   it('updates a backup filename and note', async () => {
@@ -87,7 +87,7 @@ describe('backup routes', () => {
     const response = await app.inject({ method: 'DELETE', url: '/api/backups/mysql/mysql-latest.sql.gz' });
 
     expect(response.statusCode).toBe(400);
-    expect(response.json().error).toContain('Cannot delete the newest mysql backup');
+    expect(response.json().message).toContain('Cannot delete the newest mysql backup');
   });
 
   it('returns 404 for deleted backup schedules routes', async () => {

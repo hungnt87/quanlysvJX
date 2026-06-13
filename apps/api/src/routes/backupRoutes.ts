@@ -1,184 +1,88 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import type { Multipart, MultipartValue } from '@fastify/multipart';
 import { z } from 'zod';
-import { ok } from '../api/envelope.js';
-import { deleteBackupFile, listBackupFiles, renameBackupFile, writeUploadedBackupFile } from '../backups/backupFiles.js';
-import { backupJobStore, type StartJobInput } from '../backups/backupJobs.js';
-import { getBackupDirectory, assertBackupFile } from '../backups/backupPaths.js';
-import { restoreMssql } from '../backups/mssqlBackup.js';
-import { restoreMysql } from '../backups/mysqlBackup.js';
-import { enqueueScheduledBackupRun } from '../scheduledBackups/scheduledBackupRuns.js';
+import { validate } from '../middleware/validate.js';
+import { BackupRepository } from '../repositories/backupRepository.js';
+import { BackupService } from '../services/backupService.js';
+import { BackupController } from '../controllers/backupController.js';
 
-const kindSchema = z.enum(['mysql', 'mssql']);
-const restoreSchema = z.object({ filename: z.string().min(1) });
-const updateBackupSchema = z.object({ filename: z.string().min(1), note: z.string().nullable() });
+const kindParamSchema = z.object({
+  kind: z.enum(['mysql', 'mssql'])
+});
+
+const filenameParamSchema = z.object({
+  kind: z.enum(['mysql', 'mssql']),
+  filename: z.string()
+});
+
+const restoreSchema = z.object({
+  filename: z.string().min(1)
+});
+
+const updateBackupSchema = z.object({
+  filename: z.string().min(1),
+  note: z.string().nullable()
+});
 
 export async function registerBackupRoutes(app: FastifyInstance) {
-  app.get('/api/backups', async () => ok(listBackupFiles(app.deps.config)));
+  const backupRepository = new BackupRepository(app.deps.config);
+  const backupService = new BackupService(backupRepository, app.deps);
+  const backupController = new BackupController(backupService);
 
-  app.get('/api/backups/:kind/:filename/download', async (request, reply) => {
-    const { kind, filename } = request.params as { kind: string; filename: string };
-    const parsedKind = kindSchema.parse(kind);
-    const dir = getBackupDirectory(parsedKind, app.deps.config);
-    assertBackupFile(dir, filename);
-    const filePath = path.join(dir, filename);
+  app.get('/api/backups', (req, reply) => backupController.getBackups(req, reply));
 
-    const fileStream = fs.createReadStream(filePath);
-    reply.header('Content-Disposition', `attachment; filename="${filename}"`);
-    reply.header('Content-Type', 'application/octet-stream');
-    return reply.send(fileStream);
-  });
+  app.get(
+    '/api/backups/:kind/:filename/download',
+    {
+      preHandler: validate({ params: filenameParamSchema })
+    },
+    (req, reply) => backupController.downloadBackup(req as any, reply)
+  );
 
-  app.get('/api/jobs', async () => ok(backupJobStore.listJobs()));
+  app.get('/api/jobs', (req, reply) => backupController.getJobs(req, reply));
 
-  app.post('/api/backups/mysql', async () => {
-    const run = enqueueScheduledBackupRun(
-      app.deps.config.scheduledBackupRunsFile!,
-      {
-        jobId: null,
-        jobDisplayName: null,
-        database: 'mysql',
-        trigger: 'manual',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: null
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
-    return ok(run);
-  });
+  app.post('/api/backups/mysql', (req, reply) => backupController.backupMysql(req, reply));
 
-  app.post('/api/backups/mssql', async () => {
-    const run = enqueueScheduledBackupRun(
-      app.deps.config.scheduledBackupRunsFile!,
-      {
-        jobId: null,
-        jobDisplayName: null,
-        database: 'mssql',
-        trigger: 'manual',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: null
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
-    return ok(run);
-  });
+  app.post('/api/backups/mssql', (req, reply) => backupController.backupMssql(req, reply));
 
-  app.post('/api/backups/all', async () => {
-    const batchId = `batch_${crypto.randomUUID()}`;
-    const mysqlRun = enqueueScheduledBackupRun(
-      app.deps.config.scheduledBackupRunsFile!,
-      {
-        jobId: null,
-        jobDisplayName: null,
-        database: 'mysql',
-        trigger: 'manual',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: null,
-        batchId
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
+  app.post('/api/backups/all', (req, reply) => backupController.backupAll(req, reply));
 
-    const mssqlRun = enqueueScheduledBackupRun(
-      app.deps.config.scheduledBackupRunsFile!,
-      {
-        jobId: null,
-        jobDisplayName: null,
-        database: 'mssql',
-        trigger: 'manual',
-        scheduledFor: new Date().toISOString(),
-        scheduleSnapshot: null,
-        batchId
-      },
-      app.deps.config.maxQueuedRunsPerJob,
-      app.deps.config.maxFinishedScheduledRuns
-    );
+  app.post(
+    '/api/backups/:kind/upload',
+    {
+      preHandler: validate({ params: kindParamSchema })
+    },
+    (req, reply) => backupController.uploadBackup(req as any, reply)
+  );
 
-    return ok({ mysql: mysqlRun, mssql: mssqlRun });
-  });
+  app.patch(
+    '/api/backups/:kind/:filename',
+    {
+      preHandler: validate({ params: filenameParamSchema, body: updateBackupSchema })
+    },
+    (req, reply) => backupController.updateBackup(req as any, reply)
+  );
 
-  app.post('/api/backups/:kind/upload', async (request) => {
-    const { kind } = request.params as { kind: string };
-    const parsedKind = kindSchema.parse(kind);
-    const part = await request.file();
-    if (!part) {
-      throw app.httpErrors.badRequest('Backup file is required');
-    }
+  app.delete(
+    '/api/backups/:kind/:filename',
+    {
+      preHandler: validate({ params: filenameParamSchema })
+    },
+    (req, reply) => backupController.deleteBackup(req as any, reply)
+  );
 
-    const chunks: Buffer[] = [];
-    for await (const chunk of part.file) {
-      chunks.push(Buffer.from(chunk));
-    }
+  app.post(
+    '/api/restores/mysql',
+    {
+      preHandler: validate({ body: restoreSchema })
+    },
+    (req, reply) => backupController.restoreMysql(req as any, reply)
+  );
 
-    return ok(
-      writeUploadedBackupFile({
-        ...app.deps.config,
-        kind: parsedKind,
-        filename: normalizeUploadFilename(readMultipartTextField(part.fields.filename), part.filename),
-        note: normalizeOptionalNote(readMultipartTextField(part.fields.note)),
-        data: Buffer.concat(chunks)
-      })
-    );
-  });
-
-  app.patch('/api/backups/:kind/:filename', async (request) => {
-    const { kind, filename } = request.params as { kind: string; filename: string };
-    const parsedKind = kindSchema.parse(kind);
-    const body = updateBackupSchema.parse(request.body);
-    return ok(renameBackupFile({ ...app.deps.config, kind: parsedKind, filename, nextFilename: body.filename, note: body.note }));
-  });
-
-  app.delete('/api/backups/:kind/:filename', async (request) => {
-    const { kind, filename } = request.params as { kind: string; filename: string };
-    const parsedKind = kindSchema.parse(kind);
-    return ok(deleteBackupFile({ ...app.deps.config, kind: parsedKind, filename }));
-  });
-
-  app.post('/api/restores/mysql', async (request) => {
-    const { filename } = restoreSchema.parse(request.body);
-    assertBackupFile(getBackupDirectory('mysql', app.deps.config), filename);
-    return ok(await runJob({ kind: 'restore', database: 'mysql', trigger: 'restore' }, () => restoreMysql(app.deps, filename)));
-  });
-
-  app.post('/api/restores/mssql', async (request) => {
-    const { filename } = restoreSchema.parse(request.body);
-    assertBackupFile(getBackupDirectory('mssql', app.deps.config), filename);
-    return ok(await runJob({ kind: 'restore', database: 'mssql', trigger: 'restore' }, () => restoreMssql(app.deps, filename)));
-  });
-}
-
-function readMultipartTextField(field: Multipart | Multipart[] | undefined) {
-  const value = Array.isArray(field) ? field[0] : field;
-  if (!value || value.type !== 'field') {
-    return null;
-  }
-
-  const fieldValue = (value as MultipartValue).value;
-  return typeof fieldValue === 'string' ? fieldValue.trim() : null;
-}
-
-function normalizeOptionalNote(value: string | null) {
-  return value && value.length > 0 ? value : null;
-}
-
-function normalizeUploadFilename(value: string | null, fallback: string) {
-  return value && value.length > 0 ? value : fallback;
-}
-
-async function runJob<T extends object>(input: StartJobInput, action: () => Promise<T>) {
-  const job = backupJobStore.startJob(input);
-  try {
-    const result = await action();
-    backupJobStore.finishJob(job.id, 'succeeded');
-    return { ...result, jobId: job.id };
-  } catch (error) {
-    backupJobStore.finishJob(job.id, 'failed', error instanceof Error ? error.message : 'Unknown error');
-    throw error;
-  }
+  app.post(
+    '/api/restores/mssql',
+    {
+      preHandler: validate({ body: restoreSchema })
+    },
+    (req, reply) => backupController.restoreMssql(req as any, reply)
+  );
 }
